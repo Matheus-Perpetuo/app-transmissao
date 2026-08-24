@@ -14,9 +14,31 @@ const btnTransmitir = document.getElementById('btn-transmitir');
 const playerVideo = document.getElementById('player-video');
 const statusTransmissao = document.getElementById('status-transmissao');
 
+const selectQualidade = document.getElementById('select-qualidade');
+const boxQualidade = document.getElementById('box-qualidade');
+
 let currentRoom = null;
 let meuNome = '';
 let estaTransmitindo = false;
+
+// MUDAR PARA TRUE APENAS SE QUISER TESTAR O VISUAL LOCALMENTE
+const MODO_DESIGN = false;
+
+// Perfis de Resolução e Bitrate
+const perfisQualidade = {
+  '720p30': {
+    resolution: { width: 1280, height: 720, frameRate: 30 },
+    encoding: { maxBitrate: 2000000, maxFramerate: 30 }
+  },
+  '1080p30': {
+    resolution: { width: 1920, height: 1080, frameRate: 30 },
+    encoding: { maxBitrate: 4500000, maxFramerate: 30 }
+  },
+  '1080p60': {
+    resolution: { width: 1920, height: 1080, frameRate: 60 },
+    encoding: { maxBitrate: 7000000, maxFramerate: 60 }
+  }
+};
 
 // Carrega o apelido salvo no navegador
 window.addEventListener('DOMContentLoaded', () => {
@@ -32,13 +54,26 @@ btnEntrarSala.addEventListener('click', async () => {
   if (!meuNome) return alert('Por favor, digite seu apelido!');
   if (!nomeSala) return alert('Por favor, digite o nome da sala!');
 
+  // Teste de design sem backend
+  if (MODO_DESIGN) {
+    displayIdSala.innerText = nomeSala;
+    telaLobby.classList.add('esconde');
+    telaSala.classList.remove('esconde');
+    listaParticipantes.innerHTML = `
+      <li id="user-1"><span class="nome-txt">${meuNome} (Você)</span> <span class="status-container"><span class="badge-ao-vivo"><span class="ponto-pisca"></span>AO VIVO</span></span></li>
+      <li id="user-2"><span class="nome-txt">Lucas (Amigo)</span> <span class="status-container"></span></li>
+    `;
+    contadorUsers.innerText = '2';
+    return;
+  }
+
   localStorage.setItem('app_meu_nome', meuNome);
 
   btnEntrarSala.innerText = 'Conectando...';
   btnEntrarSala.disabled = true;
 
   try {
-    // 1. Busca o token de autorização gerado pela nossa API na Vercel
+    // 1. Busca o token de autorização na Vercel
     const response = await fetch(`/api/token?room=${nomeSala}&username=${encodeURIComponent(meuNome)}`);
     const data = await response.json();
 
@@ -46,21 +81,17 @@ btnEntrarSala.addEventListener('click', async () => {
       throw new Error(data.error || 'Erro ao gerar o token de acesso.');
     }
 
-    // 2. Conecta à sala do LiveKit Cloud
-    // A URL será pega automaticamente pelas configurações
-    const livekitUrl = window.LIVEKIT_URL || data.url; 
+    // 2. Conecta ao LiveKit
     currentRoom = new LivekitClient.Room({
       adaptiveStream: true,
       dynacast: true,
     });
 
-    // 3. Registra os ouvintes de eventos da sala (Aparecer tela, Participantes entrando)
+    // 3. Registra eventos e conecta
     configurarEventosDaSala(currentRoom);
-
-    // Conecta na sala utilizando a URL e o Token retornados pela API
     await currentRoom.connect(data.wsUrl, data.token);
 
-    // Transiciona para a tela da sala
+    // Transiciona de tela
     displayIdSala.innerText = nomeSala;
     telaLobby.classList.add('esconde');
     telaSala.classList.remove('esconde');
@@ -76,41 +107,52 @@ btnEntrarSala.addEventListener('click', async () => {
   }
 });
 
-// EVENTOS DE VÍDEO E ENTRADA/SAÍDA DE AMIGOS
+// EVENTOS DE VÍDEO E AMIGOS
 function configurarEventosDaSala(room) {
-  // Quando alguém (incluindo você) começa a compartilhar tela
   room.on(LivekitClient.RoomEvent.TrackSubscribed, (track, publication, participant) => {
     if (track.kind === 'video' || track.kind === 'audio') {
       exibirVideoEAudio(track, participant);
     }
+    atualizarListaParticipantes();
   });
 
-  // Quando alguém para de transmitir
   room.on(LivekitClient.RoomEvent.TrackUnsubscribed, (track) => {
     track.detach(playerVideo);
     if (room.remoteParticipants.size === 0 && !estaTransmitindo) {
       limparPlayer();
     }
+    atualizarListaParticipantes();
   });
 
-  // Atualiza a lista de usuários quando alguém entra ou sai
+  room.on(LivekitClient.RoomEvent.TrackPublished, () => atualizarListaParticipantes());
+  room.on(LivekitClient.RoomEvent.TrackUnpublished, () => atualizarListaParticipantes());
+
   room.on(LivekitClient.RoomEvent.ParticipantConnected, () => atualizarListaParticipantes());
   room.on(LivekitClient.RoomEvent.ParticipantDisconnected, () => atualizarListaParticipantes());
 }
 
-// ATUALIZA A LISTA LATERAL DE PARTICIPANTES
+// ATUALIZA A LISTA LATERAL E RECONHECE TRANSMISSÃO DE AMIGOS
 function atualizarListaParticipantes() {
   if (!currentRoom) return;
 
   listaParticipantes.innerHTML = '';
   
-  // Adiciona a você
+  // Você
   adicionarUsuarioNaLista(`${meuNome} (Você)`, currentRoom.localParticipant.identity, estaTransmitindo);
 
-  // Adiciona os amigos
+  // Amigos
   currentRoom.remoteParticipants.forEach((p) => {
-    const estaAoVivo = p.isScreenShareEnabled;
-    adicionarUsuarioNaLista(p.identity, p.identity, estaAoVivo);
+    let amigoEstaAoVivo = false;
+    
+    p.trackPublications.forEach((pub) => {
+      if (pub.source === LivekitClient.Track.Source.ScreenShare || pub.source === LivekitClient.Track.Source.ScreenShareAudio) {
+        if (pub.isSubscribed || pub.track) amigoEstaAoVivo = true;
+      }
+    });
+
+    if (p.isScreenShareEnabled) amigoEstaAoVivo = true;
+
+    adicionarUsuarioNaLista(p.identity, p.identity, amigoEstaAoVivo);
   });
 
   contadorUsers.innerText = currentRoom.remoteParticipants.size + 1;
@@ -128,39 +170,35 @@ function adicionarUsuarioNaLista(nomeExibicao, idUsuario, aoVivo) {
   listaParticipantes.appendChild(li);
 }
 
-// BOTÃO DE TRANSMITIR TELA DO JOGO (COM ÁUDIO DO SISTEMA)
-const selectQualidade = document.getElementById('select-qualidade');
-
-// Perfis de Resolução e Bitrate
-const perfisQualidade = {
-  '720p30': {
-    resolution: { width: 1280, height: 720, frameRate: 30 },
-    encoding: { maxBitrate: 2000000, maxFramerate: 30 } // 2 Mbps
-  },
-  '1080p30': {
-    resolution: { width: 1920, height: 1080, frameRate: 30 },
-    encoding: { maxBitrate: 4500000, maxFramerate: 30 } // 4.5 Mbps
-  },
-  '1080p60': {
-    resolution: { width: 1920, height: 1080, frameRate: 60 },
-    encoding: { maxBitrate: 7000000, maxFramerate: 60 } // 7 Mbps
-  }
-};
+// TRANSMITIR TELA
 btnTransmitir.addEventListener('click', async () => {
   if (!currentRoom) return;
 
   if (estaTransmitindo) {
-    // Parar Transmissão
     await currentRoom.localParticipant.setScreenShareEnabled(false);
     estaTransmitindo = false;
+    
+    if (boxQualidade) boxQualidade.classList.remove('esconde');
+    if (selectQualidade) selectQualidade.disabled = false;
+    
     atualizarBotaoTransmitir(false);
     limparPlayer();
     atualizarListaParticipantes();
   } else {
-    // Iniciar Transmissão
     try {
-      await currentRoom.localParticipant.setScreenShareEnabled(true, { audio: true });
+      const opcao = selectQualidade ? selectQualidade.value : '720p30';
+      const perfil = perfisQualidade[opcao] || perfisQualidade['720p30'];
+
+      await currentRoom.localParticipant.setScreenShareEnabled(true, {
+        audio: true,
+        resolution: perfil.resolution,
+        screenShareEncoding: perfil.encoding,
+        contentHint: 'motion',
+        simulcast: false
+      });
+
       estaTransmitindo = true;
+      
       atualizarBotaoTransmitir(true);
       statusTransmissao.classList.add('esconde');
       atualizarListaParticipantes();
@@ -173,6 +211,12 @@ btnTransmitir.addEventListener('click', async () => {
 function exibirVideoEAudio(track, participant) {
   track.attach(playerVideo);
   statusTransmissao.classList.add('esconde');
+
+  playerVideo.playsInline = true;
+  if ('fastSeek' in playerVideo) {
+    playerVideo.fastSeek(playerVideo.duration || 0);
+  }
+
   playerVideo.play().catch(e => console.log('Autoplay:', e));
 }
 
@@ -196,30 +240,4 @@ function atualizarBotaoTransmitir(transmitindo) {
 btnCopiarId.addEventListener('click', () => {
   navigator.clipboard.writeText(displayIdSala.innerText);
   alert('Nome da sala copiado!');
-});
-
-// ATIVE ESTA LINHA PARA TESTAR APENAS O VISUAL (MODO DESIGN)
-const MODO_DESIGN = false;
-
-btnEntrarSala.addEventListener('click', async () => {
-  meuNome = inputNome.value.trim() || 'Você (Teste)';
-  const nomeSala = inputIdSala.value.trim() || 'sala-de-teste';
-
-  // Se o Modo Design estiver ativo, abre a sala sem chamar a API do LiveKit
-  if (MODO_DESIGN) {
-    displayIdSala.innerText = nomeSala;
-    telaLobby.classList.add('esconde');
-    telaSala.classList.remove('esconde');
-
-    // Insere dados fictícios para você ajustar o CSS dos participantes
-    listaParticipantes.innerHTML = `
-      <li id="user-1"><span class="nome-txt">${meuNome} (Você)</span> <span class="status-container"><span class="badge-ao-vivo"><span class="ponto-pisca"></span>AO VIVO</span></span></li>
-      <li id="user-2"><span class="nome-txt">Lucas (Amigo)</span> <span class="status-container"></span></li>
-      <li id="user-3"><span class="nome-txt">Mateus</span> <span class="status-container"></span></li>
-    `;
-    contadorUsers.innerText = '3';
-    return; // Para a execução aqui e não chama a API que dá erro
-  }
-
-  // ... (restante do código normal do LiveKit que já estava aqui)
 });

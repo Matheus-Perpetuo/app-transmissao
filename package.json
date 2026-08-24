@@ -1,8 +1,14 @@
 {
-  "name": "transmissao-discord-livekit",
+  "name": "transmissao-discord-desktop",
   "version": "1.0.0",
-  "main": "api/token.js",
+  "main": "main.js",
+  "scripts": {
+    "start": "electron ."
+  },
   "dependencies": {
     "livekit-server-sdk": "^2.10.0"
+  },
+  "devDependencies": {
+    "electron": "^43.0.0"
   }
 }

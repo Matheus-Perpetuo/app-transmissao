@@ -19,27 +19,25 @@ let meuNome = '';
 let streamAtual = null;
 let conexoesDados = [];
 let souHost = false;
+let quemEstaTransmitindo = null;
 
-// Configuração com servidores STUN públicos do Google para atravessar roteadores/firewalls
+// Configuração WebRTC com servidores STUN/TURN públicos
 const peerConfig = {
   config: {
     iceServers: [
       { urls: 'stun:stun.l.google.com:19302' },
       { urls: 'stun:stun1.l.google.com:19302' },
-      { urls: 'stun:stun2.l.google.com:19302' }
+      { urls: 'stun:stun2.l.google.com:19302' },
+      { urls: 'stun:global.stun.twilio.com:3478' }
     ]
   }
 };
 
-// Carrega APENAS o nome salvo ao abrir a página
 window.addEventListener('DOMContentLoaded', () => {
   const nomeSalvo = localStorage.getItem('app_meu_nome');
-  if (nomeSalvo) {
-    inputNome.value = nomeSalvo;
-  }
+  if (nomeSalvo) inputNome.value = nomeSalvo;
 });
 
-// Entra na tela da sala
 function entrarNaSala(idSala) {
   displayIdSala.innerText = idSala;
   telaLobby.classList.add('esconde');
@@ -47,7 +45,6 @@ function entrarNaSala(idSala) {
   adicionarUsuarioNaLista(`${meuNome} (Você)`, meuNome);
 }
 
-// Adiciona um usuário à lista de participantes com ID único de busca
 function adicionarUsuarioNaLista(nomeExibicao, idUsuario) {
   let li = document.getElementById(`user-${idUsuario}`);
   if (!li) {
@@ -58,7 +55,6 @@ function adicionarUsuarioNaLista(nomeExibicao, idUsuario) {
   }
 }
 
-// Adiciona ou remove o indicador de "AO VIVO" do usuário
 function atualizarStatusAoVivo(idUsuario, estaTransmitindo) {
   const li = document.getElementById(`user-${idUsuario}`);
   if (li) {
@@ -84,7 +80,6 @@ btnCriarSala.addEventListener('click', () => {
   if (!meuNome) return alert('Por favor, digite seu apelido!');
 
   localStorage.setItem('app_meu_nome', meuNome);
-
   souHost = true;
   peer = new Peer(peerConfig);
 
@@ -94,6 +89,17 @@ btnCriarSala.addEventListener('click', () => {
 
   peer.on('connection', (conn) => {
     conexoesDados.push(conn);
+
+    conn.on('open', () => {
+      // Quando alguém entra, o Host avisa a TODOS sobre o novo usuário
+      const listaAtual = Array.from(document.querySelectorAll('.lista-usuarios li')).map(el => ({
+        idUsuario: el.id.replace('user-', ''),
+        nome: el.querySelector('.nome-txt').innerText
+      }));
+
+      // Envia a lista existente para quem acabou de chegar
+      conn.send({ tipo: 'SINCRONIZAR_SALA', lista: listaAtual, trasmitindo: quemEstaTransmitindo });
+    });
 
     conn.on('data', (data) => {
       tratarMensagemDados(data, conn);
@@ -112,18 +118,17 @@ btnEntrarSala.addEventListener('click', () => {
   if (!idSala) return alert('Por favor, cole o ID da sala!');
 
   localStorage.setItem('app_meu_nome', meuNome);
-
   souHost = false;
   peer = new Peer(peerConfig);
 
-  peer.on('open', () => {
+  peer.on('open', (meuPeerId) => {
     entrarNaSala(idSala);
 
     const conn = peer.connect(idSala);
     conexoesDados.push(conn);
 
     conn.on('open', () => {
-      conn.send({ tipo: 'ENTROU', nome: meuNome, idUsuario: meuNome });
+      conn.send({ tipo: 'ENTROU', nome: meuNome, idUsuario: meuPeerId });
     });
 
     conn.on('data', (data) => {
@@ -141,22 +146,40 @@ btnEntrarSala.addEventListener('click', () => {
   configurarRecebimentoDeVideo();
 });
 
-// Centraliza a leitura das mensagens de dados recebidas
+// TRATAMENTO DE DADOS COM BROADCAST
 function tratarMensagemDados(data, conn) {
   if (data.tipo === 'ENTROU') {
     adicionarUsuarioNaLista(data.nome, data.idUsuario);
+    
+    // Se eu for Host, aviso todos os outros que um novo membro entrou
     if (souHost) {
-      conn.send({ tipo: 'BOAS_VINDAS', nomeHost: meuNome });
-      if (streamAtual) {
-        conn.send({ tipo: 'STATUS_AO_VIVO', idUsuario: meuNome, estaTransmitindo: true });
-      }
+      conexoesDados.forEach(c => {
+        if (c.peer !== conn.peer) {
+          c.send({ tipo: 'ENTROU', nome: data.nome, idUsuario: data.idUsuario });
+        }
+      });
     }
-  } else if (data.tipo === 'BOAS_VINDAS') {
-    adicionarUsuarioNaLista(data.nomeHost, data.nomeHost);
+  } else if (data.tipo === 'SINCRONIZAR_SALA') {
+    data.lista.forEach(user => {
+      adicionarUsuarioNaLista(user.nome, user.idUsuario);
+    });
+    if (data.trasmitindo) {
+      atualizarStatusAoVivo(data.trasmitindo, true);
+    }
   } else if (data.tipo === 'STATUS_AO_VIVO') {
+    quemEstaTransmitindo = data.estaTransmitindo ? data.idUsuario : null;
     atualizarStatusAoVivo(data.idUsuario, data.estaTransmitindo);
     if (!data.estaTransmitindo) {
       limparPlayer();
+    }
+
+    if (souHost) {
+      // Repassa para os outros membros da sala
+      conexoesDados.forEach(c => {
+        if (c.peer !== conn.peer) {
+          c.send(data);
+        }
+      });
     }
   }
 }
@@ -174,7 +197,7 @@ function configurarRecebimentoDeVideo() {
     });
   });
 
-  peer.on('error', (err) => console.error('Erro PeerJS:', err));
+  peer.on('error', (err) => alert('Erro de conexão PeerJS: ' + err.type));
 }
 
 // 3. TRANSMITIR / PARAR
@@ -185,23 +208,18 @@ btnTransmitir.addEventListener('click', async () => {
   }
 
   try {
-    streamAtual = await navigator.mediaDevices.getDisplayMedia({
-      video: true,
-      audio: true
-    });
+    streamAtual = await navigator.mediaDevices.getDisplayMedia({ video: true, audio: true });
 
     exibirVideo(streamAtual, true);
     atualizarBotaoTransmitir(true);
-    atualizarStatusAoVivo(meuNome, true);
+    atualizarStatusAoVivo(peer.id, true);
 
     conexoesDados.forEach(conn => {
       peer.call(conn.peer, streamAtual);
-      conn.send({ tipo: 'STATUS_AO_VIVO', idUsuario: meuNome, estaTransmitindo: true });
+      conn.send({ tipo: 'STATUS_AO_VIVO', idUsuario: peer.id, estaTransmitindo: true });
     });
 
-    streamAtual.getVideoTracks()[0].onended = () => {
-      pararTransmissao();
-    };
+    streamAtual.getVideoTracks()[0].onended = () => pararTransmissao();
 
   } catch (erro) {
     console.error('Erro ao compartilhar tela:', erro);
@@ -216,10 +234,10 @@ function pararTransmissao() {
 
   limparPlayer();
   atualizarBotaoTransmitir(false);
-  atualizarStatusAoVivo(meuNome, false);
+  atualizarStatusAoVivo(peer.id, false);
 
   conexoesDados.forEach(conn => {
-    conn.send({ tipo: 'STATUS_AO_VIVO', idUsuario: meuNome, estaTransmitindo: false });
+    conn.send({ tipo: 'STATUS_AO_VIVO', idUsuario: peer.id, estaTransmitindo: false });
   });
 }
 
@@ -247,7 +265,6 @@ function exibirVideo(stream, ehProprio) {
   playerVideo.play().catch(e => console.log('Autoplay:', e));
 }
 
-// 4. COPIAR ID
 btnCopiarId.addEventListener('click', () => {
   navigator.clipboard.writeText(displayIdSala.innerText);
   alert('ID copiado para a área de transferência!');

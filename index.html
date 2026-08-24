@@ -1,0 +1,78 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Sala de Transmissão</title>
+  <link rel="stylesheet" href="style.css">
+  <script src="https://unpkg.com/peerjs@1.5.2/dist/peerjs.min.js"></script>
+</head>
+<body>
+  <div class="app-container">
+
+    <!-- TELA 1: LOBBY DE ENTRADA -->
+    <div id="tela-lobby" class="card modal">
+      <h1>Entrar na Sala</h1>
+      
+      <div class="input-group">
+        <label for="input-nome">Seu Apelido:</label>
+        <input type="text" id="input-nome" placeholder="Ex: João">
+      </div>
+
+      <hr class="divisor">
+
+      <!-- Opção 1: Criar -->
+      <div class="secao-opcao">
+        <button id="btn-criar-sala" class="btn-primary">Criar Nova Sala</button>
+      </div>
+
+      <p class="ou">OU</p>
+
+      <!-- Opção 2: Entrar em existente -->
+      <div class="secao-opcao">
+        <input type="text" id="input-id-sala" placeholder="Cole o ID da sala aqui">
+        <button id="btn-entrar-sala" class="btn-secondary">Entrar na Sala</button>
+      </div>
+    </div>
+
+    <!-- TELA 2: DENTRO DA SALA (Inicia Escondida) -->
+    <div id="tela-sala" class="sala-layout esconde">
+      
+      <!-- Painel Lateral: Informações e Participantes -->
+      <aside class="sidebar">
+        <h2>Info da Sala</h2>
+        <div class="info-box">
+          <p><strong>ID da Sala:</strong></p>
+          <div class="copiar-box">
+            <span id="display-id-sala">---</span>
+            <button id="btn-copiar-id" title="Copiar ID">📋</button>
+          </div>
+        </div>
+
+        <h3>Participantes</h3>
+        <ul id="lista-participantes" class="lista-usuarios">
+          <!-- Os nomes entrarão via JavaScript -->
+        </ul>
+
+        <div class="acoes-sala">
+          <button id="btn-transmitir" class="btn-primary">🎥 Transmitir Tela</button>
+        </div>
+      </aside>
+
+      <!-- Área Principal: Player de Vídeo -->
+      <main class="area-video">
+        <div class="video-wrapper">
+          <video id="player-video" autoplay playsinline controls></video>
+          <div id="status-transmissao" class="placeholder-video">
+            <p>Nenhuma transmissão ativa no momento.</p>
+          </div>
+        </div>
+      </main>
+
+    </div>
+
+  </div>
+
+  <script src="script.js"></script>
+</body>
+</html>

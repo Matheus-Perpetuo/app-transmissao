@@ -129,6 +129,23 @@ function adicionarUsuarioNaLista(nomeExibicao, idUsuario, aoVivo) {
 }
 
 // BOTÃO DE TRANSMITIR TELA DO JOGO (COM ÁUDIO DO SISTEMA)
+const selectQualidade = document.getElementById('select-qualidade');
+
+// Perfis de Resolução e Bitrate
+const perfisQualidade = {
+  '720p30': {
+    resolution: { width: 1280, height: 720, frameRate: 30 },
+    encoding: { maxBitrate: 2000000, maxFramerate: 30 } // 2 Mbps
+  },
+  '1080p30': {
+    resolution: { width: 1920, height: 1080, frameRate: 30 },
+    encoding: { maxBitrate: 4500000, maxFramerate: 30 } // 4.5 Mbps
+  },
+  '1080p60': {
+    resolution: { width: 1920, height: 1080, frameRate: 60 },
+    encoding: { maxBitrate: 7000000, maxFramerate: 60 } // 7 Mbps
+  }
+};
 btnTransmitir.addEventListener('click', async () => {
   if (!currentRoom) return;
 
@@ -179,4 +196,30 @@ function atualizarBotaoTransmitir(transmitindo) {
 btnCopiarId.addEventListener('click', () => {
   navigator.clipboard.writeText(displayIdSala.innerText);
   alert('Nome da sala copiado!');
+});
+
+// ATIVE ESTA LINHA PARA TESTAR APENAS O VISUAL (MODO DESIGN)
+const MODO_DESIGN = true;
+
+btnEntrarSala.addEventListener('click', async () => {
+  meuNome = inputNome.value.trim() || 'Você (Teste)';
+  const nomeSala = inputIdSala.value.trim() || 'sala-de-teste';
+
+  // Se o Modo Design estiver ativo, abre a sala sem chamar a API do LiveKit
+  if (MODO_DESIGN) {
+    displayIdSala.innerText = nomeSala;
+    telaLobby.classList.add('esconde');
+    telaSala.classList.remove('esconde');
+
+    // Insere dados fictícios para você ajustar o CSS dos participantes
+    listaParticipantes.innerHTML = `
+      <li id="user-1"><span class="nome-txt">${meuNome} (Você)</span> <span class="status-container"><span class="badge-ao-vivo"><span class="ponto-pisca"></span>AO VIVO</span></span></li>
+      <li id="user-2"><span class="nome-txt">Lucas (Amigo)</span> <span class="status-container"></span></li>
+      <li id="user-3"><span class="nome-txt">Mateus</span> <span class="status-container"></span></li>
+    `;
+    contadorUsers.innerText = '3';
+    return; // Para a execução aqui e não chama a API que dá erro
+  }
+
+  // ... (restante do código normal do LiveKit que já estava aqui)
 });

@@ -1,6 +1,7 @@
-import { AccessToken } from 'livekit-server-sdk';
+const { AccessToken } = require('livekit-server-sdk');
 
-export default async function handler(req, res) {
+module.exports = async function handler(req, res) {
+  // Configuração de cabeçalhos CORS
   res.setHeader('Access-Control-Allow-Origin', '*');
   res.setHeader('Access-Control-Allow-Methods', 'GET, POST, OPTIONS');
   res.setHeader('Access-Control-Allow-Headers', 'Content-Type');
@@ -16,16 +17,23 @@ export default async function handler(req, res) {
       return res.status(400).json({ error: 'Parâmetros "room" e "username" são obrigatórios' });
     }
 
-    // Lê as variáveis salvas no painel da Vercel
     const apiKey = process.env.LIVEKIT_API_KEY;
     const apiSecret = process.env.LIVEKIT_API_SECRET;
-    const wsUrl = process.env.LIVEKIT_URL;
+    let wsUrl = process.env.LIVEKIT_URL || '';
 
+    // Validação das chaves na Vercel
     if (!apiKey || !apiSecret) {
-      return res.status(500).json({ error: 'LIVEKIT_API_KEY ou LIVEKIT_API_SECRET não foram encontradas na Vercel.' });
+      return res.status(500).json({ 
+        error: 'Chaves de API não encontradas nas variáveis de ambiente da Vercel.' 
+      });
     }
 
-    // Cria o token de permissão com duração de 8h
+    // Garante que a URL comece com wss://
+    if (wsUrl.startsWith('https://')) {
+      wsUrl = wsUrl.replace('https://', 'wss://');
+    }
+
+    // Gera o token de acesso
     const at = new AccessToken(apiKey, apiSecret, {
       identity: username,
       ttl: '8h',
@@ -42,6 +50,7 @@ export default async function handler(req, res) {
     return res.status(200).json({ token, wsUrl });
 
   } catch (err) {
-    return res.status(500).json({ error: 'Erro interno na API: ' + err.message });
+    console.error('Erro interno na API Token:', err);
+    return res.status(500).json({ error: 'Erro interno ao gerar token: ' + err.message });
   }
-}
+};

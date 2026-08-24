@@ -199,7 +199,7 @@ btnCopiarId.addEventListener('click', () => {
 });
 
 // ATIVE ESTA LINHA PARA TESTAR APENAS O VISUAL (MODO DESIGN)
-const MODO_DESIGN = true;
+const MODO_DESIGN = false;
 
 btnEntrarSala.addEventListener('click', async () => {
   meuNome = inputNome.value.trim() || 'Você (Teste)';

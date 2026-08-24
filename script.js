@@ -57,8 +57,8 @@ btnEntrarSala.addEventListener('click', async () => {
     // 3. Registra os ouvintes de eventos da sala (Aparecer tela, Participantes entrando)
     configurarEventosDaSala(currentRoom);
 
-    // Conecta na sala (Substitua pela URL do seu LiveKit caso a API não envie)
-    await currentRoom.connect(location.origin.includes('localhost') ? 'wss://SEU-PROJETO.livekit.cloud' : data.wsUrl || 'wss://', data.token);
+    // Conecta na sala utilizando a URL e o Token retornados pela API
+    await currentRoom.connect(data.wsUrl, data.token);
 
     // Transiciona para a tela da sala
     displayIdSala.innerText = nomeSala;

@@ -3,72 +3,60 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Sala de Transmissão</title>
+  <title>Transmissão - Discord Style</title>
   <link rel="stylesheet" href="style.css">
-  <script src="https://unpkg.com/peerjs@1.5.2/dist/peerjs.min.js"></script>
+  <!-- SDK Oficial do LiveKit para Navegador -->
+  <script src="https://cdn.jsdelivr.net/npm/livekit-client/dist/livekit-client.umd.min.js"></script>
 </head>
 <body>
-  <div class="app-container">
+  <div class="container">
+    
+    <!-- TELA 1: LOBBY -->
+    <div id="tela-lobby" class="card">
+      <h1>🎮 Transmissão de Tela</h1>
+      <p>Conecte-se para assistir ou compartilhar seu jogo com amigos.</p>
 
-    <!-- TELA 1: LOBBY DE ENTRADA -->
-    <div id="tela-lobby" class="card modal">
-      <h1>Entrar na Sala</h1>
-      
-      <div class="input-group">
+      <div class="form-group">
         <label for="input-nome">Seu Apelido:</label>
-        <input type="text" id="input-nome" placeholder="Ex: João">
+        <input type="text" id="input-nome" placeholder="Ex: Lucas" maxlength="20">
       </div>
 
-      <hr class="divisor">
-
-      <!-- Opção 1: Criar -->
-      <div class="secao-opcao">
-        <button id="btn-criar-sala" class="btn-primary">Criar Nova Sala</button>
+      <div class="form-group">
+        <label for="input-id-sala">Nome da Sala:</label>
+        <input type="text" id="input-id-sala" placeholder="Ex: sala-dos-cria">
       </div>
 
-      <p class="ou">OU</p>
-
-      <!-- Opção 2: Entrar em existente -->
-      <div class="secao-opcao">
-        <input type="text" id="input-id-sala" placeholder="Cole o ID da sala aqui">
-        <button id="btn-entrar-sala" class="btn-secondary">Entrar na Sala</button>
+      <div class="botoes-lobby">
+        <button id="btn-entrar-sala" class="btn btn-primary">Entrar / Criar Sala</button>
       </div>
     </div>
 
-    <!-- TELA 2: DENTRO DA SALA (Inicia Escondida) -->
-    <div id="tela-sala" class="sala-layout esconde">
-      
-      <!-- Painel Lateral: Informações e Participantes -->
-      <aside class="sidebar">
-        <h2>Info da Sala</h2>
-        <div class="info-box">
-          <p><strong>ID da Sala:</strong></p>
-          <div class="copiar-box">
-            <span id="display-id-sala">---</span>
-            <button id="btn-copiar-id" title="Copiar ID">📋</button>
-          </div>
-        </div>
+    <!-- TELA 2: DENTRO DA SALA -->
+    <div id="tela-sala" class="card esconde">
+      <div class="header-sala">
+        <h2>Sala: <span id="display-id-sala">---</span></h2>
+        <button id="btn-copiar-id" class="btn btn-secondary">📋 Copiar Nome da Sala</button>
+      </div>
 
-        <h3>Participantes</h3>
-        <ul id="lista-participantes" class="lista-usuarios">
-          <!-- Os nomes entrarão via JavaScript -->
-        </ul>
-
-        <div class="acoes-sala">
-          <button id="btn-transmitir" class="btn-primary">🎥 Transmitir Tela</button>
-        </div>
-      </aside>
-
-      <!-- Área Principal: Player de Vídeo -->
-      <main class="area-video">
-        <div class="video-wrapper">
+      <div class="conteudo-sala">
+        <!-- ÁREA DO VÍDEO -->
+        <div class="area-video">
           <video id="player-video" autoplay playsinline controls></video>
-          <div id="status-transmissao" class="placeholder-video">
-            <p>Nenhuma transmissão ativa no momento.</p>
+          <div id="status-transmissao" class="overlay-status">
+            <p>Ninguém está transmitindo a tela no momento.</p>
           </div>
         </div>
-      </main>
 
+        <!-- BARRA LATERAL: PARTICIPANTES -->
+        <div class="sidebar-participantes">
+          <h3>Participantes (<span id="contador-users">0</span>)</h3>
+          <ul id="lista-participantes" class="lista-usuarios"></ul>
+          
+          <div class="controles-midia">
+            <button id="btn-transmitir" class="btn btn-primary">🎥 Transmitir Tela</button>
+          </div>
+        </div>
+      </div>
     </div>
 
   </div>

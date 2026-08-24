@@ -4,245 +4,168 @@ const telaSala = document.getElementById('tela-sala');
 
 const inputNome = document.getElementById('input-nome');
 const inputIdSala = document.getElementById('input-id-sala');
-const btnCriarSala = document.getElementById('btn-criar-sala');
 const btnEntrarSala = document.getElementById('btn-entrar-sala');
 
 const displayIdSala = document.getElementById('display-id-sala');
 const btnCopiarId = document.getElementById('btn-copiar-id');
 const listaParticipantes = document.getElementById('lista-participantes');
+const contadorUsers = document.getElementById('contador-users');
 const btnTransmitir = document.getElementById('btn-transmitir');
 const playerVideo = document.getElementById('player-video');
 const statusTransmissao = document.getElementById('status-transmissao');
 
-let peer = null;
+let currentRoom = null;
 let meuNome = '';
-let streamAtual = null;
-let conexoesDados = [];
-let souHost = false;
-let quemEstaTransmitindo = null;
+let estaTransmitindo = false;
 
-// Configuração WebRTC com servidores STUN/TURN públicos
-const peerConfig = {
-  config: {
-    iceServers: [
-      { urls: 'stun:stun.l.google.com:19302' },
-      { urls: 'stun:stun1.l.google.com:19302' },
-      { urls: 'stun:stun2.l.google.com:19302' },
-      { urls: 'stun:global.stun.twilio.com:3478' }
-    ]
-  }
-};
-
+// Carrega o apelido salvo no navegador
 window.addEventListener('DOMContentLoaded', () => {
   const nomeSalvo = localStorage.getItem('app_meu_nome');
   if (nomeSalvo) inputNome.value = nomeSalvo;
 });
 
-function entrarNaSala(idSala) {
-  displayIdSala.innerText = idSala;
-  telaLobby.classList.add('esconde');
-  telaSala.classList.remove('esconde');
-  adicionarUsuarioNaLista(`${meuNome} (Você)`, meuNome);
-}
-
-function adicionarUsuarioNaLista(nomeExibicao, idUsuario) {
-  let li = document.getElementById(`user-${idUsuario}`);
-  if (!li) {
-    li = document.createElement('li');
-    li.id = `user-${idUsuario}`;
-    li.innerHTML = `<span class="nome-txt">${nomeExibicao}</span> <span class="status-container"></span>`;
-    listaParticipantes.appendChild(li);
-  }
-}
-
-function atualizarStatusAoVivo(idUsuario, estaTransmitindo) {
-  const li = document.getElementById(`user-${idUsuario}`);
-  if (li) {
-    const statusContainer = li.querySelector('.status-container');
-    if (estaTransmitindo) {
-      statusContainer.innerHTML = `<span class="badge-ao-vivo"><span class="ponto-pisca"></span>AO VIVO</span>`;
-    } else {
-      statusContainer.innerHTML = '';
-    }
-  }
-}
-
-function criarStreamDummy() {
-  const canvas = document.createElement('canvas');
-  canvas.width = 1;
-  canvas.height = 1;
-  return canvas.captureStream(1);
-}
-
-// 1. CRIAR SALA (HOST)
-btnCriarSala.addEventListener('click', () => {
+// ENTRAR OU CRIAR A SALA VIA LIVEKIT
+btnEntrarSala.addEventListener('click', async () => {
   meuNome = inputNome.value.trim();
-  if (!meuNome) return alert('Por favor, digite seu apelido!');
-
-  localStorage.setItem('app_meu_nome', meuNome);
-  souHost = true;
-  peer = new Peer(peerConfig);
-
-  peer.on('open', (id) => {
-    entrarNaSala(id);
-  });
-
-  peer.on('connection', (conn) => {
-    conexoesDados.push(conn);
-
-    conn.on('open', () => {
-      // Quando alguém entra, o Host avisa a TODOS sobre o novo usuário
-      const listaAtual = Array.from(document.querySelectorAll('.lista-usuarios li')).map(el => ({
-        idUsuario: el.id.replace('user-', ''),
-        nome: el.querySelector('.nome-txt').innerText
-      }));
-
-      // Envia a lista existente para quem acabou de chegar
-      conn.send({ tipo: 'SINCRONIZAR_SALA', lista: listaAtual, trasmitindo: quemEstaTransmitindo });
-    });
-
-    conn.on('data', (data) => {
-      tratarMensagemDados(data, conn);
-    });
-  });
-
-  configurarRecebimentoDeVideo();
-});
-
-// 2. ENTRAR EM SALA (CONVIDADO)
-btnEntrarSala.addEventListener('click', () => {
-  meuNome = inputNome.value.trim();
-  const idSala = inputIdSala.value.trim();
+  const nomeSala = inputIdSala.value.trim().toLowerCase().replace(/\s+/g, '-');
 
   if (!meuNome) return alert('Por favor, digite seu apelido!');
-  if (!idSala) return alert('Por favor, cole o ID da sala!');
+  if (!nomeSala) return alert('Por favor, digite o nome da sala!');
 
   localStorage.setItem('app_meu_nome', meuNome);
-  souHost = false;
-  peer = new Peer(peerConfig);
 
-  peer.on('open', (meuPeerId) => {
-    entrarNaSala(idSala);
-
-    const conn = peer.connect(idSala);
-    conexoesDados.push(conn);
-
-    conn.on('open', () => {
-      conn.send({ tipo: 'ENTROU', nome: meuNome, idUsuario: meuPeerId });
-    });
-
-    conn.on('data', (data) => {
-      tratarMensagemDados(data, conn);
-    });
-
-    const dummyStream = criarStreamDummy();
-    const chamada = peer.call(idSala, dummyStream);
-
-    chamada.on('stream', (streamRemoto) => {
-      exibirVideo(streamRemoto, false);
-    });
-  });
-
-  configurarRecebimentoDeVideo();
-});
-
-// TRATAMENTO DE DADOS COM BROADCAST
-function tratarMensagemDados(data, conn) {
-  if (data.tipo === 'ENTROU') {
-    adicionarUsuarioNaLista(data.nome, data.idUsuario);
-    
-    // Se eu for Host, aviso todos os outros que um novo membro entrou
-    if (souHost) {
-      conexoesDados.forEach(c => {
-        if (c.peer !== conn.peer) {
-          c.send({ tipo: 'ENTROU', nome: data.nome, idUsuario: data.idUsuario });
-        }
-      });
-    }
-  } else if (data.tipo === 'SINCRONIZAR_SALA') {
-    data.lista.forEach(user => {
-      adicionarUsuarioNaLista(user.nome, user.idUsuario);
-    });
-    if (data.trasmitindo) {
-      atualizarStatusAoVivo(data.trasmitindo, true);
-    }
-  } else if (data.tipo === 'STATUS_AO_VIVO') {
-    quemEstaTransmitindo = data.estaTransmitindo ? data.idUsuario : null;
-    atualizarStatusAoVivo(data.idUsuario, data.estaTransmitindo);
-    if (!data.estaTransmitindo) {
-      limparPlayer();
-    }
-
-    if (souHost) {
-      // Repassa para os outros membros da sala
-      conexoesDados.forEach(c => {
-        if (c.peer !== conn.peer) {
-          c.send(data);
-        }
-      });
-    }
-  }
-}
-
-function configurarRecebimentoDeVideo() {
-  peer.on('call', (chamada) => {
-    if (streamAtual) {
-      chamada.answer(streamAtual);
-    } else {
-      chamada.answer();
-    }
-
-    chamada.on('stream', (streamRemoto) => {
-      exibirVideo(streamRemoto, false);
-    });
-  });
-
-  peer.on('error', (err) => alert('Erro de conexão PeerJS: ' + err.type));
-}
-
-// 3. TRANSMITIR / PARAR
-btnTransmitir.addEventListener('click', async () => {
-  if (streamAtual) {
-    pararTransmissao();
-    return;
-  }
+  btnEntrarSala.innerText = 'Conectando...';
+  btnEntrarSala.disabled = true;
 
   try {
-    streamAtual = await navigator.mediaDevices.getDisplayMedia({ video: true, audio: true });
+    // 1. Busca o token de autorização gerado pela nossa API na Vercel
+    const response = await fetch(`/api/token?room=${nomeSala}&username=${encodeURIComponent(meuNome)}`);
+    const data = await response.json();
 
-    exibirVideo(streamAtual, true);
-    atualizarBotaoTransmitir(true);
-    atualizarStatusAoVivo(peer.id, true);
+    if (!response.ok || !data.token) {
+      throw new Error(data.error || 'Erro ao gerar o token de acesso.');
+    }
 
-    conexoesDados.forEach(conn => {
-      peer.call(conn.peer, streamAtual);
-      conn.send({ tipo: 'STATUS_AO_VIVO', idUsuario: peer.id, estaTransmitindo: true });
+    // 2. Conecta à sala do LiveKit Cloud
+    // A URL será pega automaticamente pelas configurações
+    const livekitUrl = window.LIVEKIT_URL || data.url; 
+    currentRoom = new LivekitClient.Room({
+      adaptiveStream: true,
+      dynacast: true,
     });
 
-    streamAtual.getVideoTracks()[0].onended = () => pararTransmissao();
+    // 3. Registra os ouvintes de eventos da sala (Aparecer tela, Participantes entrando)
+    configurarEventosDaSala(currentRoom);
+
+    // Conecta na sala (Substitua pela URL do seu LiveKit caso a API não envie)
+    await currentRoom.connect(location.origin.includes('localhost') ? 'wss://SEU-PROJETO.livekit.cloud' : data.wsUrl || 'wss://', data.token);
+
+    // Transiciona para a tela da sala
+    displayIdSala.innerText = nomeSala;
+    telaLobby.classList.add('esconde');
+    telaSala.classList.remove('esconde');
+
+    atualizarListaParticipantes();
 
   } catch (erro) {
-    console.error('Erro ao compartilhar tela:', erro);
+    console.error('Erro ao conectar na sala:', erro);
+    alert('Não foi possível entrar na sala: ' + erro.message);
+  } finally {
+    btnEntrarSala.innerText = 'Entrar / Criar Sala';
+    btnEntrarSala.disabled = false;
   }
 });
 
-function pararTransmissao() {
-  if (streamAtual) {
-    streamAtual.getTracks().forEach(track => track.stop());
-    streamAtual = null;
-  }
-
-  limparPlayer();
-  atualizarBotaoTransmitir(false);
-  atualizarStatusAoVivo(peer.id, false);
-
-  conexoesDados.forEach(conn => {
-    conn.send({ tipo: 'STATUS_AO_VIVO', idUsuario: peer.id, estaTransmitindo: false });
+// EVENTOS DE VÍDEO E ENTRADA/SAÍDA DE AMIGOS
+function configurarEventosDaSala(room) {
+  // Quando alguém (incluindo você) começa a compartilhar tela
+  room.on(LivekitClient.RoomEvent.TrackSubscribed, (track, publication, participant) => {
+    if (track.kind === 'video' || track.kind === 'audio') {
+      exibirVideoEAudio(track, participant);
+    }
   });
+
+  // Quando alguém para de transmitir
+  room.on(LivekitClient.RoomEvent.TrackUnsubscribed, (track) => {
+    track.detach(playerVideo);
+    if (room.remoteParticipants.size === 0 && !estaTransmitindo) {
+      limparPlayer();
+    }
+  });
+
+  // Atualiza a lista de usuários quando alguém entra ou sai
+  room.on(LivekitClient.RoomEvent.ParticipantConnected, () => atualizarListaParticipantes());
+  room.on(LivekitClient.RoomEvent.ParticipantDisconnected, () => atualizarListaParticipantes());
 }
 
-function atualizarBotaoTransmitir(estaTransmitindo) {
+// ATUALIZA A LISTA LATERAL DE PARTICIPANTES
+function atualizarListaParticipantes() {
+  if (!currentRoom) return;
+
+  listaParticipantes.innerHTML = '';
+  
+  // Adiciona a você
+  adicionarUsuarioNaLista(`${meuNome} (Você)`, currentRoom.localParticipant.identity, estaTransmitindo);
+
+  // Adiciona os amigos
+  currentRoom.remoteParticipants.forEach((p) => {
+    const estaAoVivo = p.isScreenShareEnabled;
+    adicionarUsuarioNaLista(p.identity, p.identity, estaAoVivo);
+  });
+
+  contadorUsers.innerText = currentRoom.remoteParticipants.size + 1;
+}
+
+function adicionarUsuarioNaLista(nomeExibicao, idUsuario, aoVivo) {
+  const li = document.createElement('li');
+  li.id = `user-${idUsuario}`;
+  
+  const badgeHtml = aoVivo 
+    ? `<span class="badge-ao-vivo"><span class="ponto-pisca"></span>AO VIVO</span>` 
+    : '';
+
+  li.innerHTML = `<span class="nome-txt">${nomeExibicao}</span> <span class="status-container">${badgeHtml}</span>`;
+  listaParticipantes.appendChild(li);
+}
+
+// BOTÃO DE TRANSMITIR TELA DO JOGO (COM ÁUDIO DO SISTEMA)
+btnTransmitir.addEventListener('click', async () => {
+  if (!currentRoom) return;
+
   if (estaTransmitindo) {
+    // Parar Transmissão
+    await currentRoom.localParticipant.setScreenShareEnabled(false);
+    estaTransmitindo = false;
+    atualizarBotaoTransmitir(false);
+    limparPlayer();
+    atualizarListaParticipantes();
+  } else {
+    // Iniciar Transmissão
+    try {
+      await currentRoom.localParticipant.setScreenShareEnabled(true, { audio: true });
+      estaTransmitindo = true;
+      atualizarBotaoTransmitir(true);
+      statusTransmissao.classList.add('esconde');
+      atualizarListaParticipantes();
+    } catch (err) {
+      console.error('Erro ao compartilhar tela:', err);
+    }
+  }
+});
+
+function exibirVideoEAudio(track, participant) {
+  track.attach(playerVideo);
+  statusTransmissao.classList.add('esconde');
+  playerVideo.play().catch(e => console.log('Autoplay:', e));
+}
+
+function limparPlayer() {
+  playerVideo.srcObject = null;
+  statusTransmissao.classList.remove('esconde');
+}
+
+function atualizarBotaoTransmitir(transmitindo) {
+  if (transmitindo) {
     btnTransmitir.innerText = '⏹ Parar Transmissão';
     btnTransmitir.classList.remove('btn-primary');
     btnTransmitir.classList.add('btn-danger');
@@ -253,19 +176,7 @@ function atualizarBotaoTransmitir(estaTransmitindo) {
   }
 }
 
-function limparPlayer() {
-  playerVideo.srcObject = null;
-  statusTransmissao.classList.remove('esconde');
-}
-
-function exibirVideo(stream, ehProprio) {
-  playerVideo.srcObject = stream;
-  playerVideo.muted = ehProprio;
-  statusTransmissao.classList.add('esconde');
-  playerVideo.play().catch(e => console.log('Autoplay:', e));
-}
-
 btnCopiarId.addEventListener('click', () => {
   navigator.clipboard.writeText(displayIdSala.innerText);
-  alert('ID copiado para a área de transferência!');
+  alert('Nome da sala copiado!');
 });

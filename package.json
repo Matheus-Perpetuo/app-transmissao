@@ -1,0 +1,8 @@
+{
+  "name": "transmissao-discord-livekit",
+  "version": "1.0.0",
+  "main": "api/token.js",
+  "dependencies": {
+    "livekit-server-sdk": "^2.10.0"
+  }
+}

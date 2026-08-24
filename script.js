@@ -20,12 +20,20 @@ let streamAtual = null;
 let conexoesDados = [];
 let souHost = false;
 
-// --- NOVO: RECURSO DE MEMÓRIA (localStorage) ---
-// Carrega o nome ao abrir a página
+// Configuração com servidores STUN públicos do Google para atravessar roteadores/firewalls
+const peerConfig = {
+  config: {
+    iceServers: [
+      { urls: 'stun:stun.l.google.com:19302' },
+      { urls: 'stun:stun1.l.google.com:19302' },
+      { urls: 'stun:stun2.l.google.com:19302' }
+    ]
+  }
+};
+
+// Carrega APENAS o nome salvo ao abrir a página
 window.addEventListener('DOMContentLoaded', () => {
   const nomeSalvo = localStorage.getItem('app_meu_nome');
-  const ultimaSalaSalva = localStorage.getItem('app_ultima_sala');
-
   if (nomeSalvo) {
     inputNome.value = nomeSalvo;
   }
@@ -75,11 +83,10 @@ btnCriarSala.addEventListener('click', () => {
   meuNome = inputNome.value.trim();
   if (!meuNome) return alert('Por favor, digite seu apelido!');
 
-  // Salva o nome no navegador
   localStorage.setItem('app_meu_nome', meuNome);
 
   souHost = true;
-  peer = new Peer();
+  peer = new Peer(peerConfig);
 
   peer.on('open', (id) => {
     entrarNaSala(id);
@@ -87,6 +94,7 @@ btnCriarSala.addEventListener('click', () => {
 
   peer.on('connection', (conn) => {
     conexoesDados.push(conn);
+
     conn.on('data', (data) => {
       tratarMensagemDados(data, conn);
     });
@@ -103,12 +111,10 @@ btnEntrarSala.addEventListener('click', () => {
   if (!meuNome) return alert('Por favor, digite seu apelido!');
   if (!idSala) return alert('Por favor, cole o ID da sala!');
 
-  // Salva o nome no navegador
   localStorage.setItem('app_meu_nome', meuNome);
-  
 
   souHost = false;
-  peer = new Peer();
+  peer = new Peer(peerConfig);
 
   peer.on('open', () => {
     entrarNaSala(idSala);

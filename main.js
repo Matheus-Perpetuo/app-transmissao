@@ -145,6 +145,12 @@ function abrirSeletor() {
 
 app.whenReady().then(() => {
 
+    ipcMain.handle('obter-versao', () => {
+        return app.getVersion();
+    });
+
+    // resto do seu código...
+
 
     // ========================================================
     // IPC - ABRIR SELETOR

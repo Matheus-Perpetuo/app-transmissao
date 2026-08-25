@@ -343,3 +343,14 @@ body {
   outline: none;
   cursor: pointer;
 }
+
+#versao-app {
+    position: fixed;
+    bottom: 8px;
+    right: 10px;
+    font-size: 11px;
+    color: #888;
+    opacity: 0.7;
+    user-select: none;
+    pointer-events: none;
+}

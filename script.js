@@ -73,6 +73,38 @@ if (typeof require === 'function') {
     );
 }
 
+async function carregarVersaoApp() {
+    const elementoVersao =
+        document.getElementById('versao-app');
+
+    if (!elementoVersao) {
+        return;
+    }
+
+    // Electron
+    if (ipcRenderer) {
+        try {
+            const versao =
+                await ipcRenderer.invoke('obter-versao');
+
+            elementoVersao.innerText =
+                `v${versao}`;
+
+            return;
+        } catch (erro) {
+            console.error(
+                'Erro ao obter versão do Electron:',
+                erro
+            );
+        }
+    }
+
+    // Navegador / Vercel
+    elementoVersao.innerText = 'Web';
+}
+
+carregarVersaoApp();
+
 
 // ============================================================
 // ESTADO DA APLICAÇÃO

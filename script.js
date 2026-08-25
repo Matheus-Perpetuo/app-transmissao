@@ -49,9 +49,29 @@ const boxQualidade =
 // ELECTRON
 // ============================================================
 
-const {
-    ipcRenderer
-} = require('electron');
+let ipcRenderer = null;
+
+if (typeof require === 'function') {
+    try {
+        const electron = require('electron');
+
+        ipcRenderer = electron.ipcRenderer;
+
+        console.log('Modo Electron detectado.');
+
+    } catch (erro) {
+
+        console.log(
+            'Modo navegador detectado.'
+        );
+    }
+
+} else {
+
+    console.log(
+        'Modo navegador detectado.'
+    );
+}
 
 
 // ============================================================
@@ -59,9 +79,7 @@ const {
 // ============================================================
 
 let currentRoom = null;
-
 let meuNome = '';
-
 let estaTransmitindo = false;
 
 
@@ -70,11 +88,9 @@ let estaTransmitindo = false;
 // ============================================================
 
 let localVideoTrack = null;
-
 let localAudioTrack = null;
 
 let currentVideoPublication = null;
-
 let currentAudioPublication = null;
 
 
@@ -157,77 +173,70 @@ window.addEventListener(
 
 
 // ============================================================
-// FONTE SELECIONADA NO SELETOR
+// FONTE SELECIONADA PELO SELETOR DO ELECTRON
 // ============================================================
 
-ipcRenderer.on(
-    'fonte-selecionada-confirmada',
-    async (event, fonte) => {
+if (ipcRenderer) {
 
-        console.log('');
-        console.log(
-            '=========================================='
-        );
+    ipcRenderer.on(
+        'fonte-selecionada-confirmada',
+        async (event, fonte) => {
 
-        console.log(
-            'FONTE CONFIRMADA PELO SELETOR'
-        );
-
-        console.log(
-            '=========================================='
-        );
-
-        console.log(
-            'Nome:',
-            fonte.name
-        );
-
-        console.log(
-            'ID:',
-            fonte.id
-        );
-
-        console.log(
-            '=========================================='
-        );
-
-
-        // ----------------------------------------------------
-        // GUARDAR FONTE
-        // ----------------------------------------------------
-
-        fonteSelecionada = {
-
-            id: fonte.id,
-
-            name: fonte.name
-        };
-
-
-        // ----------------------------------------------------
-        // INICIAR CAPTURA
-        // ----------------------------------------------------
-
-        try {
-
-            await iniciarTransmissao();
-
-        } catch (erro) {
-
-            console.error(
-                'Erro ao iniciar transmissão:',
-                erro
+            console.log('');
+            console.log(
+                '=========================================='
+            );
+            console.log(
+                'FONTE CONFIRMADA PELO SELETOR'
+            );
+            console.log(
+                '=========================================='
             );
 
-            alert(
-                'Não foi possível iniciar a transmissão: ' +
-                erro.message
+            console.log(
+                'Nome:',
+                fonte.name
             );
 
-            fonteSelecionada = null;
+            console.log(
+                'ID:',
+                fonte.id
+            );
+
+            console.log(
+                '=========================================='
+            );
+
+
+            fonteSelecionada = {
+
+                id: fonte.id,
+
+                name: fonte.name
+            };
+
+
+            try {
+
+                await iniciarTransmissao();
+
+            } catch (erro) {
+
+                console.error(
+                    'Erro ao iniciar transmissão:',
+                    erro
+                );
+
+                alert(
+                    'Não foi possível iniciar a transmissão: ' +
+                    erro.message
+                );
+
+                fonteSelecionada = null;
+            }
         }
-    }
-);
+    );
+}
 
 
 // ============================================================
@@ -308,7 +317,7 @@ btnEntrarSala.addEventListener(
 
 
             // =================================================
-            // LIVEKIT ROOM
+            // LIVEKIT
             // =================================================
 
             currentRoom =
@@ -393,6 +402,7 @@ function configurarEventosDaSala(room) {
 
     room.on(
         LivekitClient.RoomEvent.TrackSubscribed,
+
         (
             track,
             publication,
@@ -425,6 +435,7 @@ function configurarEventosDaSala(room) {
 
     room.on(
         LivekitClient.RoomEvent.TrackUnsubscribed,
+
         track => {
 
             try {
@@ -459,7 +470,6 @@ function configurarEventosDaSala(room) {
     room.on(
         LivekitClient.RoomEvent.TrackPublished,
         () => {
-
             atualizarListaParticipantes();
         }
     );
@@ -468,7 +478,6 @@ function configurarEventosDaSala(room) {
     room.on(
         LivekitClient.RoomEvent.TrackUnpublished,
         () => {
-
             atualizarListaParticipantes();
         }
     );
@@ -477,7 +486,6 @@ function configurarEventosDaSala(room) {
     room.on(
         LivekitClient.RoomEvent.ParticipantConnected,
         () => {
-
             atualizarListaParticipantes();
         }
     );
@@ -486,7 +494,6 @@ function configurarEventosDaSala(room) {
     room.on(
         LivekitClient.RoomEvent.ParticipantDisconnected,
         () => {
-
             atualizarListaParticipantes();
         }
     );
@@ -579,12 +586,14 @@ function adicionarUsuarioNaLista(
 
     const badgeHtml =
         aoVivo
+
             ? `
                 <span class="badge-ao-vivo">
                     <span class="ponto-pisca"></span>
                     AO VIVO
                 </span>
             `
+
             : '';
 
 
@@ -661,13 +670,20 @@ async function pararTransmissao() {
     }
 
 
-    estaTransmitindo = false;
+    estaTransmitindo =
+        false;
 
-    currentVideoPublication = null;
 
-    currentAudioPublication = null;
+    currentVideoPublication =
+        null;
 
-    fonteSelecionada = null;
+
+    currentAudioPublication =
+        null;
+
+
+    fonteSelecionada =
+        null;
 
 
     if (boxQualidade) {
@@ -692,6 +708,7 @@ async function pararTransmissao() {
 
     limparPlayer();
 
+
     atualizarListaParticipantes();
 }
 
@@ -702,17 +719,13 @@ async function pararTransmissao() {
 
 async function iniciarTransmissao() {
 
-    if (!fonteSelecionada) {
+    if (!currentRoom) {
 
         throw new Error(
-            'Nenhuma fonte de transmissão foi selecionada.'
+            'Você precisa estar em uma sala antes de transmitir.'
         );
     }
 
-
-    // --------------------------------------------------------
-    // PERFIL
-    // --------------------------------------------------------
 
     const opcao =
         selectQualidade
@@ -738,15 +751,19 @@ async function iniciarTransmissao() {
         '=========================================='
     );
 
-    console.log(
-        'Fonte escolhida:',
-        fonteSelecionada.name
-    );
 
-    console.log(
-        'ID da fonte:',
-        fonteSelecionada.id
-    );
+    if (fonteSelecionada) {
+
+        console.log(
+            'Fonte escolhida:',
+            fonteSelecionada.name
+        );
+
+        console.log(
+            'ID da fonte:',
+            fonteSelecionada.id
+        );
+    }
 
 
     // ========================================================
@@ -774,6 +791,7 @@ async function iniciarTransmissao() {
                 }
             },
 
+            // ÁUDIO MANTIDO
             audio: true
         });
 
@@ -795,8 +813,20 @@ async function iniciarTransmissao() {
 
 
     // ========================================================
-    // VERIFICAÇÃO DA CAPTURA
+    // TRACK DE ÁUDIO
     // ========================================================
+
+    localAudioTrack =
+        stream.getAudioTracks()[0] || null;
+
+
+    // ========================================================
+    // DIAGNÓSTICO
+    // ========================================================
+
+    const settings =
+        localVideoTrack.getSettings();
+
 
     console.log('');
     console.log(
@@ -804,16 +834,12 @@ async function iniciarTransmissao() {
     );
 
     console.log(
-        'FONTE REALMENTE CAPTURADA'
+        'CAPTURA REAL'
     );
 
     console.log(
         '=========================================='
     );
-
-
-    const settings =
-        localVideoTrack.getSettings();
 
 
     console.log(
@@ -834,9 +860,18 @@ async function iniciarTransmissao() {
     );
 
 
+    if (fonteSelecionada) {
+
+        console.log(
+            'Fonte selecionada:',
+            fonteSelecionada.name
+        );
+    }
+
+
     console.log(
-        'Fonte selecionada:',
-        fonteSelecionada.name
+        'Áudio capturado:',
+        !!localAudioTrack
     );
 
 
@@ -854,7 +889,7 @@ async function iniciarTransmissao() {
 
 
     // ========================================================
-    // PUBLICAR SCREEN SHARE
+    // PUBLICAR VÍDEO
     // ========================================================
 
     currentVideoPublication =
@@ -886,44 +921,36 @@ async function iniciarTransmissao() {
         );
 
 
-    console.log('');
-    console.log(
-        '=========================================='
-    );
-
-    console.log(
-        'PUBLICAÇÃO LIVEKIT CONFIRMADA'
-    );
-
-    console.log(
-        '=========================================='
-    );
-
-    console.log(
-        'Track SID:',
-        currentVideoPublication.trackSid
-    );
-
-    console.log(
-        'Source:',
-        currentVideoPublication.source
-    );
-
-    console.log(
-        'Codec:',
-        currentVideoPublication.codec
-    );
-
-
     // ========================================================
-    // ÁUDIO
+    // PUBLICAR ÁUDIO
     // ========================================================
 
-    localAudioTrack =
-        null;
+    if (localAudioTrack) {
 
-    currentAudioPublication =
-        null;
+        currentAudioPublication =
+            await currentRoom.localParticipant.publishTrack(
+                localAudioTrack,
+                {
+
+                    name:
+                        'screen_share_audio',
+
+                    source:
+                        LivekitClient.Track.Source.ScreenShareAudio
+                }
+            );
+
+
+        console.log(
+            'Áudio publicado.'
+        );
+
+    } else {
+
+        console.log(
+            'Nenhuma faixa de áudio foi capturada.'
+        );
+    }
 
 
     // ========================================================
@@ -964,6 +991,40 @@ async function iniciarTransmissao() {
 
 
 // ============================================================
+// TRANSMISSÃO NO NAVEGADOR
+// ============================================================
+
+async function iniciarTransmissaoNavegador() {
+
+    console.log(
+        'Modo navegador: abrindo seletor nativo de captura.'
+    );
+
+
+    fonteSelecionada = null;
+
+
+    try {
+
+        await iniciarTransmissao();
+
+    } catch (erro) {
+
+        console.error(
+            'Erro ao iniciar transmissão no navegador:',
+            erro
+        );
+
+
+        alert(
+            'Não foi possível iniciar a transmissão: ' +
+            erro.message
+        );
+    }
+}
+
+
+// ============================================================
 // BOTÃO TRANSMITIR
 // ============================================================
 
@@ -979,6 +1040,10 @@ btnTransmitir.addEventListener(
             return;
         }
 
+
+        // ----------------------------------------------------
+        // PARAR
+        // ----------------------------------------------------
 
         if (estaTransmitindo) {
 
@@ -1009,17 +1074,35 @@ btnTransmitir.addEventListener(
 
 
         // ----------------------------------------------------
-        // ABRIR SELETOR PERSONALIZADO
+        // ELECTRON
+        // ----------------------------------------------------
+
+        if (ipcRenderer) {
+
+            console.log(
+                'Abrindo seletor personalizado do Electron...'
+            );
+
+
+            ipcRenderer.send(
+                'abrir-seletor'
+            );
+
+
+            return;
+        }
+
+
+        // ----------------------------------------------------
+        // NAVEGADOR
         // ----------------------------------------------------
 
         console.log(
-            'Abrindo seletor de fonte...'
+            'Abrindo seletor nativo do navegador...'
         );
 
 
-        ipcRenderer.send(
-            'abrir-seletor'
-        );
+        await iniciarTransmissaoNavegador();
     }
 );
 

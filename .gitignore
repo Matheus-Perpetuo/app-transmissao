@@ -1,8 +1,22 @@
-.vercel
-.env*
+# Vercel
+.vercel/
+
+# Variáveis de ambiente
+.env
+.env.*
+!.env.example
+
+# Dependências
 node_modules/
+
+# Builds do Electron
 dist/
 out/
-.env
-.env.local
-*.log   
+
+# Logs
+*.log
+
+# Arquivos do sistema/editor
+.DS_Store
+Thumbs.db
+.vscode/

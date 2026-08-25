@@ -354,3 +354,17 @@ body {
     user-select: none;
     pointer-events: none;
 }
+
+/* ============================================================
+   AUTENTICAÇÃO
+   ============================================================ */
+
+.status-autenticacao {
+    margin-top: 15px;
+    text-align: center;
+    font-size: 14px;
+}
+
+.erro-autenticacao {
+    color: #ff5555;
+}

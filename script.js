@@ -1,3 +1,4 @@
+
 // ============================================================
 // REFERÊNCIAS DO HTML
 // ============================================================
@@ -222,7 +223,8 @@ async function autenticarUsuario() {
 
         if (
             !response.ok ||
-            !data.authorized
+            !data.authorized ||
+            !data.sessionToken
         ) {
 
             throw new Error(
@@ -240,9 +242,23 @@ async function autenticarUsuario() {
             true;
 
 
+        // ----------------------------------------------------
+        // SALVAR AUTENTICAÇÃO
+        // ----------------------------------------------------
+
         sessionStorage.setItem(
             'app_autenticado',
             'true'
+        );
+
+
+        // ----------------------------------------------------
+        // SALVAR TOKEN DA SESSÃO
+        // ----------------------------------------------------
+
+        sessionStorage.setItem(
+            'app_session_token',
+            data.sessionToken
         );
 
 
@@ -250,6 +266,15 @@ async function autenticarUsuario() {
             'Usuário autenticado com sucesso.'
         );
 
+
+        console.log(
+            'Session token recebido.'
+        );
+
+
+        // ----------------------------------------------------
+        // MOSTRAR LOBBY
+        // ----------------------------------------------------
 
         telaAutenticacao.classList.add(
             'esconde'
@@ -351,7 +376,20 @@ function verificarAutenticacaoSalva() {
         );
 
 
-    if (autenticado === 'true') {
+    const sessionToken =
+        sessionStorage.getItem(
+            'app_session_token'
+        );
+
+
+    // --------------------------------------------------------
+    // SESSÃO VÁLIDA
+    // --------------------------------------------------------
+
+    if (
+        autenticado === 'true' &&
+        sessionToken
+    ) {
 
         usuarioAutenticado =
             true;
@@ -374,6 +412,24 @@ function verificarAutenticacaoSalva() {
 
         return true;
     }
+
+
+    // --------------------------------------------------------
+    // SESSÃO INVÁLIDA / AUSENTE
+    // --------------------------------------------------------
+
+    sessionStorage.removeItem(
+        'app_autenticado'
+    );
+
+
+    sessionStorage.removeItem(
+        'app_session_token'
+    );
+
+
+    usuarioAutenticado =
+        false;
 
 
     telaAutenticacao.classList.remove(
@@ -624,6 +680,37 @@ btnEntrarSala.addEventListener(
         }
 
 
+        // ----------------------------------------------------
+        // TOKEN DA SESSÃO
+        // ----------------------------------------------------
+
+        const sessionToken =
+            sessionStorage.getItem(
+                'app_session_token'
+            );
+
+
+        if (!sessionToken) {
+
+            usuarioAutenticado =
+                false;
+
+
+            sessionStorage.removeItem(
+                'app_autenticado'
+            );
+
+
+            return alert(
+                'Sua sessão de autenticação não foi encontrada. Faça o login novamente.'
+            );
+        }
+
+
+        // ----------------------------------------------------
+        // DADOS DA SALA
+        // ----------------------------------------------------
+
         meuNome =
             inputNome.value.trim();
 
@@ -673,14 +760,63 @@ btnEntrarSala.addEventListener(
                     : VERCEL_URL;
 
 
+            // =================================================
+            // SOLICITAR TOKEN DO LIVEKIT
+            // =================================================
+
             const response =
                 await fetch(
-                    `${baseUrl}/api/token?room=${nomeSala}&username=${encodeURIComponent(meuNome)}`
+                    `${baseUrl}/api/token?room=${nomeSala}&username=${encodeURIComponent(meuNome)}`,
+                    {
+                        method: 'GET',
+
+                        headers: {
+
+                            'Authorization':
+                                `Bearer ${sessionToken}`
+                        }
+                    }
                 );
 
 
             const data =
                 await response.json();
+
+
+            // =================================================
+            // SESSÃO EXPIRADA / INVÁLIDA
+            // =================================================
+
+            if (response.status === 401) {
+
+                sessionStorage.removeItem(
+                    'app_autenticado'
+                );
+
+
+                sessionStorage.removeItem(
+                    'app_session_token'
+                );
+
+
+                usuarioAutenticado =
+                    false;
+
+
+                telaAutenticacao.classList.remove(
+                    'esconde'
+                );
+
+
+                telaLobby.classList.add(
+                    'esconde'
+                );
+
+
+                throw new Error(
+                    'Sua sessão expirou. Faça a autenticação novamente.'
+                );
+            }
 
 
             if (
@@ -1660,3 +1796,4 @@ btnCopiarId.addEventListener(
         );
     }
 );
+

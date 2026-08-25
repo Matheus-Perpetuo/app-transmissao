@@ -19,7 +19,7 @@ module.exports = async function handler(req, res) {
 
     res.setHeader(
         'Access-Control-Allow-Headers',
-        'Content-Type'
+        'Content-Type, Authorization'
     );
 
 
@@ -73,10 +73,31 @@ module.exports = async function handler(req, res) {
 
 
         // --------------------------------------------------------
-        // GET
+        // 1. HEADER AUTHORIZATION
         // --------------------------------------------------------
 
-        if (req.method === 'GET') {
+        const authorization =
+            req.headers.authorization;
+
+
+        if (
+            authorization &&
+            authorization.startsWith('Bearer ')
+        ) {
+
+            sessionToken =
+                authorization.substring(7).trim();
+        }
+
+
+        // --------------------------------------------------------
+        // 2. GET - QUERY STRING
+        // --------------------------------------------------------
+
+        if (
+            !sessionToken &&
+            req.method === 'GET'
+        ) {
 
             sessionToken =
                 req.query.sessionToken || null;
@@ -84,15 +105,22 @@ module.exports = async function handler(req, res) {
 
 
         // --------------------------------------------------------
-        // POST
+        // 3. POST - BODY
         // --------------------------------------------------------
 
-        if (req.method === 'POST') {
+        if (
+            !sessionToken &&
+            req.method === 'POST'
+        ) {
 
             sessionToken =
                 req.body?.sessionToken || null;
         }
 
+
+        // ========================================================
+        // TOKEN NÃO ENCONTRADO
+        // ========================================================
 
         if (!sessionToken) {
 
@@ -142,12 +170,21 @@ module.exports = async function handler(req, res) {
 
         } catch (error) {
 
+            console.error(
+                'Erro ao decodificar sessão:',
+                error
+            );
+
             return res.status(401).json({
                 error:
                     'Sessão inválida.'
             });
         }
 
+
+        // ========================================================
+        // SEPARAR DADOS DA SESSÃO
+        // ========================================================
 
         const parts =
             decodedSession.split('.');
@@ -177,7 +214,11 @@ module.exports = async function handler(req, res) {
             Number(timestamp);
 
 
-        if (!Number.isFinite(sessionTime)) {
+        if (
+            !Number.isFinite(
+                sessionTime
+            )
+        ) {
 
             return res.status(401).json({
                 error:
@@ -203,7 +244,7 @@ module.exports = async function handler(req, res) {
 
             return res.status(401).json({
                 error:
-                    'Sessão expirada. Digite novamente seu código de acesso.'
+                    'Sua sessão expirou. Faça a autenticação novamente.'
             });
         }
 
@@ -226,17 +267,31 @@ module.exports = async function handler(req, res) {
                 .digest('hex');
 
 
+        // ========================================================
+        // COMPARAÇÃO SEGURA
+        // ========================================================
+
+        if (
+            receivedSignature.length !==
+            expectedSignature.length
+        ) {
+
+            return res.status(401).json({
+                error:
+                    'Sessão inválida.'
+            });
+        }
+
+
         const signaturesEqual =
-
-            receivedSignature.length ===
-                expectedSignature.length &&
-
             crypto.timingSafeEqual(
                 Buffer.from(
-                    receivedSignature
+                    receivedSignature,
+                    'utf8'
                 ),
                 Buffer.from(
-                    expectedSignature
+                    expectedSignature,
+                    'utf8'
                 )
             );
 
@@ -263,7 +318,9 @@ module.exports = async function handler(req, res) {
                 .split(',')
                 .map(
                     item =>
-                        item.trim().toUpperCase()
+                        item
+                            .trim()
+                            .toUpperCase()
                 )
                 .filter(Boolean);
 
@@ -298,6 +355,10 @@ module.exports = async function handler(req, res) {
 
 
         if (!apiKey || !apiSecret) {
+
+            console.error(
+                'LIVEKIT_API_KEY ou LIVEKIT_API_SECRET não configurado.'
+            );
 
             return res.status(500).json({
                 error:

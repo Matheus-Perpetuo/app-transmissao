@@ -1,14 +1,39 @@
 {
-  "name": "transmissao-discord-desktop",
+  "name": "apptransmitir",
+  "productName": "AppTransmitir",
   "version": "1.0.0",
+  "description": "Aplicativo para transmissão de tela em tempo real",
   "main": "main.js",
+  "author": "Matheus",
   "scripts": {
-    "start": "electron ."
+    "start": "electron .",
+    "build": "electron-builder"
   },
   "dependencies": {
     "livekit-server-sdk": "^2.10.0"
   },
   "devDependencies": {
-    "electron": "^43.0.0"
+    "electron": "^43.4.1",
+    "electron-builder": "^26.0.12"
+  },
+  "build": {
+    "appId": "com.apptransmitir.desktop",
+    "productName": "AppTransmitir",
+    "directories": {
+      "output": "dist"
+    },
+    "files": [
+      "**/*",
+      "!node_modules/.cache/**"
+    ],
+    "win": {
+      "target": "nsis"
+    },
+    "nsis": {
+      "oneClick": false,
+      "allowToChangeInstallationDirectory": true,
+      "createDesktopShortcut": true,
+      "createStartMenuShortcut": true
+    }
   }
 }

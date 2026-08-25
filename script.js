@@ -2,20 +2,56 @@
 // REFERÊNCIAS DO HTML
 // ============================================================
 
-const telaLobby = document.getElementById('tela-lobby');
-const telaSala = document.getElementById('tela-sala');
-const inputNome = document.getElementById('input-nome');
-const inputIdSala = document.getElementById('input-id-sala');
-const btnEntrarSala = document.getElementById('btn-entrar-sala');
-const displayIdSala = document.getElementById('display-id-sala');
-const btnCopiarId = document.getElementById('btn-copiar-id');
-const listaParticipantes = document.getElementById('lista-participantes');
-const contadorUsers = document.getElementById('contador-users');
-const btnTransmitir = document.getElementById('btn-transmitir');
-const playerVideo = document.getElementById('player-video');
-const statusTransmissao = document.getElementById('status-transmissao');
-const selectQualidade = document.getElementById('select-qualidade');
-const boxQualidade = document.getElementById('box-qualidade');
+const telaLobby =
+    document.getElementById('tela-lobby');
+
+const telaSala =
+    document.getElementById('tela-sala');
+
+const inputNome =
+    document.getElementById('input-nome');
+
+const inputIdSala =
+    document.getElementById('input-id-sala');
+
+const btnEntrarSala =
+    document.getElementById('btn-entrar-sala');
+
+const displayIdSala =
+    document.getElementById('display-id-sala');
+
+const btnCopiarId =
+    document.getElementById('btn-copiar-id');
+
+const listaParticipantes =
+    document.getElementById('lista-participantes');
+
+const contadorUsers =
+    document.getElementById('contador-users');
+
+const btnTransmitir =
+    document.getElementById('btn-transmitir');
+
+const playerVideo =
+    document.getElementById('player-video');
+
+const statusTransmissao =
+    document.getElementById('status-transmissao');
+
+const selectQualidade =
+    document.getElementById('select-qualidade');
+
+const boxQualidade =
+    document.getElementById('box-qualidade');
+
+
+// ============================================================
+// ELECTRON
+// ============================================================
+
+const {
+    ipcRenderer
+} = require('electron');
 
 
 // ============================================================
@@ -23,26 +59,38 @@ const boxQualidade = document.getElementById('box-qualidade');
 // ============================================================
 
 let currentRoom = null;
+
 let meuNome = '';
+
 let estaTransmitindo = false;
 
 
 // ============================================================
-// CONTROLE DA CAPTURA DESKTOP
+// CONTROLE DA CAPTURA
 // ============================================================
 
 let localVideoTrack = null;
+
 let localAudioTrack = null;
 
 let currentVideoPublication = null;
+
 let currentAudioPublication = null;
+
+
+// ============================================================
+// FONTE SELECIONADA
+// ============================================================
+
+let fonteSelecionada = null;
 
 
 // ============================================================
 // URL DO BACKEND
 // ============================================================
 
-const VERCEL_URL = 'https://app-transmissao.vercel.app';
+const VERCEL_URL =
+    'https://app-transmissao.vercel.app';
 
 
 // ============================================================
@@ -52,35 +100,37 @@ const VERCEL_URL = 'https://app-transmissao.vercel.app';
 const perfisQualidade = {
 
     '720p30': {
+
         resolution: {
             width: 1280,
             height: 720,
             frameRate: 30
         },
 
-        maxBitrate: 4_000_000
+        maxBitrate: 4000000
     },
 
     '1080p30': {
+
         resolution: {
             width: 1920,
             height: 1080,
             frameRate: 30
         },
 
-        maxBitrate: 7_000_000
+        maxBitrate: 7000000
     },
 
     '1080p60': {
+
         resolution: {
             width: 1920,
             height: 1080,
             frameRate: 60
         },
 
-        maxBitrate: 10_000_000
+        maxBitrate: 10000000
     }
-
 };
 
 
@@ -88,178 +138,251 @@ const perfisQualidade = {
 // DOM READY
 // ============================================================
 
-window.addEventListener('DOMContentLoaded', () => {
+window.addEventListener(
+    'DOMContentLoaded',
+    () => {
 
-    const nomeSalvo =
-        localStorage.getItem('app_meu_nome');
+        const nomeSalvo =
+            localStorage.getItem(
+                'app_meu_nome'
+            );
 
-    if (nomeSalvo) {
-        inputNome.value = nomeSalvo;
+        if (nomeSalvo) {
+
+            inputNome.value =
+                nomeSalvo;
+        }
     }
+);
 
-});
+
+// ============================================================
+// FONTE SELECIONADA NO SELETOR
+// ============================================================
+
+ipcRenderer.on(
+    'fonte-selecionada-confirmada',
+    async (event, fonte) => {
+
+        console.log('');
+        console.log(
+            '=========================================='
+        );
+
+        console.log(
+            'FONTE CONFIRMADA PELO SELETOR'
+        );
+
+        console.log(
+            '=========================================='
+        );
+
+        console.log(
+            'Nome:',
+            fonte.name
+        );
+
+        console.log(
+            'ID:',
+            fonte.id
+        );
+
+        console.log(
+            '=========================================='
+        );
+
+
+        // ----------------------------------------------------
+        // GUARDAR FONTE
+        // ----------------------------------------------------
+
+        fonteSelecionada = {
+
+            id: fonte.id,
+
+            name: fonte.name
+        };
+
+
+        // ----------------------------------------------------
+        // INICIAR CAPTURA
+        // ----------------------------------------------------
+
+        try {
+
+            await iniciarTransmissao();
+
+        } catch (erro) {
+
+            console.error(
+                'Erro ao iniciar transmissão:',
+                erro
+            );
+
+            alert(
+                'Não foi possível iniciar a transmissão: ' +
+                erro.message
+            );
+
+            fonteSelecionada = null;
+        }
+    }
+);
 
 
 // ============================================================
 // ENTRAR NA SALA
 // ============================================================
 
-btnEntrarSala.addEventListener('click', async () => {
+btnEntrarSala.addEventListener(
+    'click',
+    async () => {
 
-    meuNome = inputNome.value.trim();
+        meuNome =
+            inputNome.value.trim();
 
-    const nomeSala = inputIdSala.value
-        .trim()
-        .toLowerCase()
-        .replace(/\s+/g, '-');
-
-
-    if (!meuNome) {
-
-        return alert(
-            'Por favor, digite seu apelido!'
-        );
-
-    }
+        const nomeSala =
+            inputIdSala.value
+                .trim()
+                .toLowerCase()
+                .replace(/\s+/g, '-');
 
 
-    if (!nomeSala) {
+        if (!meuNome) {
 
-        return alert(
-            'Por favor, digite o nome da sala!'
-        );
-
-    }
-
-
-    localStorage.setItem(
-        'app_meu_nome',
-        meuNome
-    );
-
-
-    btnEntrarSala.innerText =
-        'Conectando...';
-
-    btnEntrarSala.disabled = true;
-
-
-    try {
-
-        const baseUrl =
-            location.protocol.startsWith('http')
-                ? ''
-                : VERCEL_URL;
-
-
-        const response = await fetch(
-            `${baseUrl}/api/token?room=${nomeSala}&username=${encodeURIComponent(meuNome)}`
-        );
-
-
-        const data =
-            await response.json();
-
-
-        if (!response.ok || !data.token) {
-
-            throw new Error(
-                data.error ||
-                'Erro ao gerar o token de acesso.'
+            return alert(
+                'Por favor, digite seu apelido!'
             );
-
         }
 
 
-        // ====================================================
-        // LIVEKIT ROOM
-        // ====================================================
+        if (!nomeSala) {
 
-        currentRoom =
-            new LivekitClient.Room({
-
-                adaptiveStream: false,
-
-                dynacast: false
-
-            });
+            return alert(
+                'Por favor, digite o nome da sala!'
+            );
+        }
 
 
-        configurarEventosDaSala(
-            currentRoom
+        localStorage.setItem(
+            'app_meu_nome',
+            meuNome
         );
 
-
-        await currentRoom.connect(
-            data.wsUrl,
-            data.token
-        );
-
-
-        console.log(
-            'Conectado ao LiveKit.'
-        );
-
-
-        console.log(
-            'LiveKit Client:',
-            LivekitClient.version
-        );
-
-
-        console.log(
-            'GPU / Chromium:',
-            {
-                userAgent:
-                    navigator.userAgent,
-
-                platform:
-                    navigator.platform
-            }
-        );
-
-
-        displayIdSala.innerText =
-            nomeSala;
-
-
-        telaLobby.classList.add(
-            'esconde'
-        );
-
-
-        telaSala.classList.remove(
-            'esconde'
-        );
-
-
-        atualizarListaParticipantes();
-
-
-    } catch (erro) {
-
-        console.error(
-            'Erro ao conectar na sala:',
-            erro
-        );
-
-
-        alert(
-            'Não foi possível entrar na sala: ' +
-            erro.message
-        );
-
-
-    } finally {
 
         btnEntrarSala.innerText =
-            'Entrar / Criar Sala';
+            'Conectando...';
 
-        btnEntrarSala.disabled = false;
+        btnEntrarSala.disabled =
+            true;
 
+
+        try {
+
+            const baseUrl =
+                location.protocol.startsWith('http')
+                    ? ''
+                    : VERCEL_URL;
+
+
+            const response =
+                await fetch(
+                    `${baseUrl}/api/token?room=${nomeSala}&username=${encodeURIComponent(meuNome)}`
+                );
+
+
+            const data =
+                await response.json();
+
+
+            if (
+                !response.ok ||
+                !data.token
+            ) {
+
+                throw new Error(
+                    data.error ||
+                    'Erro ao gerar o token de acesso.'
+                );
+            }
+
+
+            // =================================================
+            // LIVEKIT ROOM
+            // =================================================
+
+            currentRoom =
+                new LivekitClient.Room({
+
+                    adaptiveStream: false,
+
+                    dynacast: false
+                });
+
+
+            configurarEventosDaSala(
+                currentRoom
+            );
+
+
+            await currentRoom.connect(
+                data.wsUrl,
+                data.token
+            );
+
+
+            console.log(
+                'Conectado ao LiveKit.'
+            );
+
+
+            console.log(
+                'LiveKit Client:',
+                LivekitClient.version
+            );
+
+
+            displayIdSala.innerText =
+                nomeSala;
+
+
+            telaLobby.classList.add(
+                'esconde'
+            );
+
+
+            telaSala.classList.remove(
+                'esconde'
+            );
+
+
+            atualizarListaParticipantes();
+
+
+        } catch (erro) {
+
+            console.error(
+                'Erro ao conectar na sala:',
+                erro
+            );
+
+
+            alert(
+                'Não foi possível entrar na sala: ' +
+                erro.message
+            );
+
+
+        } finally {
+
+            btnEntrarSala.innerText =
+                'Entrar / Criar Sala';
+
+            btnEntrarSala.disabled =
+                false;
+        }
     }
-
-});
+);
 
 
 // ============================================================
@@ -268,15 +391,13 @@ btnEntrarSala.addEventListener('click', async () => {
 
 function configurarEventosDaSala(room) {
 
-
-    // --------------------------------------------------------
-    // TRACK RECEBIDA
-    // --------------------------------------------------------
-
     room.on(
         LivekitClient.RoomEvent.TrackSubscribed,
-
-        (track, publication, participant) => {
+        (
+            track,
+            publication,
+            participant
+        ) => {
 
             console.log(
                 'Track recebida:',
@@ -294,24 +415,17 @@ function configurarEventosDaSala(room) {
                 exibirVideoEAudio(
                     track
                 );
-
             }
 
 
             atualizarListaParticipantes();
-
         }
     );
 
 
-    // --------------------------------------------------------
-    // TRACK REMOVIDA
-    // --------------------------------------------------------
-
     room.on(
         LivekitClient.RoomEvent.TrackUnsubscribed,
-
-        (track) => {
+        track => {
 
             try {
 
@@ -325,7 +439,6 @@ function configurarEventosDaSala(room) {
                     'Erro ao remover track:',
                     err
                 );
-
             }
 
 
@@ -335,75 +448,48 @@ function configurarEventosDaSala(room) {
             ) {
 
                 limparPlayer();
-
             }
 
 
             atualizarListaParticipantes();
-
         }
     );
 
-
-    // --------------------------------------------------------
-    // TRACK PUBLICADA
-    // --------------------------------------------------------
 
     room.on(
         LivekitClient.RoomEvent.TrackPublished,
-
         () => {
 
             atualizarListaParticipantes();
-
         }
     );
 
-
-    // --------------------------------------------------------
-    // TRACK DESPUBLICADA
-    // --------------------------------------------------------
 
     room.on(
         LivekitClient.RoomEvent.TrackUnpublished,
-
         () => {
 
             atualizarListaParticipantes();
-
         }
     );
 
-
-    // --------------------------------------------------------
-    // PARTICIPANTE ENTROU
-    // --------------------------------------------------------
 
     room.on(
         LivekitClient.RoomEvent.ParticipantConnected,
-
         () => {
 
             atualizarListaParticipantes();
-
         }
     );
 
-
-    // --------------------------------------------------------
-    // PARTICIPANTE SAIU
-    // --------------------------------------------------------
 
     room.on(
         LivekitClient.RoomEvent.ParticipantDisconnected,
-
         () => {
 
             atualizarListaParticipantes();
-
         }
     );
-
 }
 
 
@@ -421,10 +507,6 @@ function atualizarListaParticipantes() {
     listaParticipantes.innerHTML = '';
 
 
-    // --------------------------------------------------------
-    // EU
-    // --------------------------------------------------------
-
     adicionarUsuarioNaLista(
         `${meuNome} (Você)`,
         currentRoom.localParticipant.identity,
@@ -432,19 +514,15 @@ function atualizarListaParticipantes() {
     );
 
 
-    // --------------------------------------------------------
-    // OUTROS PARTICIPANTES
-    // --------------------------------------------------------
-
     currentRoom.remoteParticipants.forEach(
-        (p) => {
+        p => {
 
             let amigoEstaAoVivo =
                 p.isScreenShareEnabled;
 
 
             p.trackPublications.forEach(
-                (pub) => {
+                pub => {
 
                     if (
                         pub.source ===
@@ -459,12 +537,10 @@ function atualizarListaParticipantes() {
                             pub.track
                         ) {
 
-                            amigoEstaAoVivo = true;
-
+                            amigoEstaAoVivo =
+                                true;
                         }
-
                     }
-
                 }
             );
 
@@ -474,19 +550,17 @@ function atualizarListaParticipantes() {
                 p.identity,
                 amigoEstaAoVivo
             );
-
         }
     );
 
 
     contadorUsers.innerText =
         currentRoom.remoteParticipants.size + 1;
-
 }
 
 
 // ============================================================
-// ADICIONAR USUÁRIO NA LISTA
+// ADICIONAR USUÁRIO
 // ============================================================
 
 function adicionarUsuarioNaLista(
@@ -503,16 +577,15 @@ function adicionarUsuarioNaLista(
         `user-${idUsuario}`;
 
 
-    const badgeHtml = aoVivo
-
-        ? `
-            <span class="badge-ao-vivo">
-                <span class="ponto-pisca"></span>
-                AO VIVO
-            </span>
-        `
-
-        : '';
+    const badgeHtml =
+        aoVivo
+            ? `
+                <span class="badge-ao-vivo">
+                    <span class="ponto-pisca"></span>
+                    AO VIVO
+                </span>
+            `
+            : '';
 
 
     li.innerHTML = `
@@ -529,7 +602,6 @@ function adicionarUsuarioNaLista(
     listaParticipantes.appendChild(
         li
     );
-
 }
 
 
@@ -541,11 +613,6 @@ async function pararTransmissao() {
 
     try {
 
-
-        // ----------------------------------------------------
-        // DESPUBLICAR VÍDEO
-        // ----------------------------------------------------
-
         if (
             currentVideoPublication &&
             currentVideoPublication.track
@@ -555,13 +622,8 @@ async function pararTransmissao() {
                 .unpublishTrack(
                     currentVideoPublication.track
                 );
-
         }
 
-
-        // ----------------------------------------------------
-        // DESPUBLICAR ÁUDIO
-        // ----------------------------------------------------
 
         if (
             currentAudioPublication &&
@@ -572,35 +634,23 @@ async function pararTransmissao() {
                 .unpublishTrack(
                     currentAudioPublication.track
                 );
-
         }
 
-
-        // ----------------------------------------------------
-        // PARAR TRACK DE VÍDEO
-        // ----------------------------------------------------
 
         if (localVideoTrack) {
 
             localVideoTrack.stop();
 
             localVideoTrack = null;
-
         }
 
-
-        // ----------------------------------------------------
-        // PARAR TRACK DE ÁUDIO
-        // ----------------------------------------------------
 
         if (localAudioTrack) {
 
             localAudioTrack.stop();
 
             localAudioTrack = null;
-
         }
-
 
     } catch (err) {
 
@@ -608,35 +658,30 @@ async function pararTransmissao() {
             'Erro ao parar transmissão:',
             err
         );
-
     }
 
 
     estaTransmitindo = false;
 
-
     currentVideoPublication = null;
 
     currentAudioPublication = null;
 
+    fonteSelecionada = null;
 
-    // --------------------------------------------------------
-    // REATIVAR CONTROLES
-    // --------------------------------------------------------
 
     if (boxQualidade) {
 
         boxQualidade.classList.remove(
             'esconde'
         );
-
     }
 
 
     if (selectQualidade) {
 
-        selectQualidade.disabled = false;
-
+        selectQualidade.disabled =
+            false;
     }
 
 
@@ -647,9 +692,7 @@ async function pararTransmissao() {
 
     limparPlayer();
 
-
     atualizarListaParticipantes();
-
 }
 
 
@@ -659,9 +702,16 @@ async function pararTransmissao() {
 
 async function iniciarTransmissao() {
 
+    if (!fonteSelecionada) {
+
+        throw new Error(
+            'Nenhuma fonte de transmissão foi selecionada.'
+        );
+    }
+
 
     // --------------------------------------------------------
-    // PERFIL SELECIONADO
+    // PERFIL
     // --------------------------------------------------------
 
     const opcao =
@@ -676,51 +726,31 @@ async function iniciarTransmissao() {
 
 
     console.log('');
+    console.log(
+        '=========================================='
+    );
+
+    console.log(
+        'INICIANDO TRANSMISSÃO'
+    );
 
     console.log(
         '=========================================='
     );
 
     console.log(
-        '         INICIANDO TRANSMISSÃO'
+        'Fonte escolhida:',
+        fonteSelecionada.name
     );
 
     console.log(
-        '=========================================='
-    );
-
-
-    console.log(
-        'Perfil:',
-        opcao
-    );
-
-
-    console.log(
-        'Resolução desejada:',
-        `${perfil.resolution.width}x${perfil.resolution.height}`
-    );
-
-
-    console.log(
-        'FPS desejado:',
-        perfil.resolution.frameRate
-    );
-
-
-    console.log(
-        'Bitrate máximo:',
-        `${perfil.maxBitrate / 1_000_000} Mbps`
-    );
-
-
-    console.log(
-        '=========================================='
+        'ID da fonte:',
+        fonteSelecionada.id
     );
 
 
     // ========================================================
-    // CAPTURA DA TELA
+    // CAPTURA
     // ========================================================
 
     const stream =
@@ -729,30 +759,22 @@ async function iniciarTransmissao() {
             video: {
 
                 width: {
-
                     ideal:
                         perfil.resolution.width
-
                 },
 
                 height: {
-
                     ideal:
                         perfil.resolution.height
-
                 },
 
                 frameRate: {
-
                     ideal:
                         perfil.resolution.frameRate
-
                 }
-
             },
 
             audio: true
-
         });
 
 
@@ -767,32 +789,22 @@ async function iniciarTransmissao() {
     if (!localVideoTrack) {
 
         throw new Error(
-            'Não foi possível capturar a tela.'
+            'Não foi possível capturar a fonte selecionada.'
         );
-
     }
 
 
     // ========================================================
-    // OTIMIZAÇÃO PARA JOGOS
-    // ========================================================
-
-    localVideoTrack.contentHint =
-        'motion';
-
-
-    // ========================================================
-    // DIAGNÓSTICO DA CAPTURA
+    // VERIFICAÇÃO DA CAPTURA
     // ========================================================
 
     console.log('');
-
     console.log(
         '=========================================='
     );
 
     console.log(
-        '           CAPTURA REAL'
+        'FONTE REALMENTE CAPTURADA'
     );
 
     console.log(
@@ -817,41 +829,28 @@ async function iniciarTransmissao() {
 
 
     console.log(
-        'Aspect Ratio:',
-        settings.aspectRatio
-    );
-
-
-    console.log(
         'Display Surface:',
         settings.displaySurface
     );
 
 
     console.log(
-        'Cursor:',
-        settings.cursor
-    );
-
-
-    console.log(
-        'Configuração completa:',
-        settings
-    );
-
-
-    console.log('');
-
-
-    console.log(
-        'Capacidades:',
-        localVideoTrack.getCapabilities()
+        'Fonte selecionada:',
+        fonteSelecionada.name
     );
 
 
     console.log(
         '=========================================='
     );
+
+
+    // ========================================================
+    // OTIMIZAÇÃO PARA JOGOS
+    // ========================================================
+
+    localVideoTrack.contentHint =
+        'motion';
 
 
     // ========================================================
@@ -860,38 +859,20 @@ async function iniciarTransmissao() {
 
     currentVideoPublication =
         await currentRoom.localParticipant.publishTrack(
-
             localVideoTrack,
-
             {
 
                 name:
                     'screen_share',
 
-
                 source:
                     LivekitClient.Track.Source.ScreenShare,
-
-
-                // ------------------------------------------------
-                // SEM SIMULCAST
-                // ------------------------------------------------
 
                 simulcast:
                     false,
 
-
-                // ------------------------------------------------
-                // H.264
-                // ------------------------------------------------
-
                 videoCodec:
                     'h264',
-
-
-                // ------------------------------------------------
-                // CONFIGURAÇÃO ESPECÍFICA PARA SCREEN SHARE
-                // ------------------------------------------------
 
                 screenShareEncoding: {
 
@@ -900,56 +881,33 @@ async function iniciarTransmissao() {
 
                     maxFramerate:
                         perfil.resolution.frameRate
-
                 }
-
             }
-
         );
 
 
-    // ========================================================
-    // PUBLICAÇÃO CONFIRMADA
-    // ========================================================
-
     console.log('');
-
     console.log(
         '=========================================='
     );
 
     console.log(
-        '        PUBLICAÇÃO LIVEKIT'
+        'PUBLICAÇÃO LIVEKIT CONFIRMADA'
     );
 
     console.log(
         '=========================================='
     );
-
-
-    console.log(
-        'Publication:',
-        currentVideoPublication
-    );
-
-
-    console.log(
-        'Track:',
-        currentVideoPublication.track
-    );
-
 
     console.log(
         'Track SID:',
         currentVideoPublication.trackSid
     );
 
-
     console.log(
         'Source:',
         currentVideoPublication.source
     );
-
 
     console.log(
         'Codec:',
@@ -957,57 +915,19 @@ async function iniciarTransmissao() {
     );
 
 
-    console.log(
-        '=========================================='
-    );
-
-
     // ========================================================
-    // ÁUDIO DO SISTEMA
+    // ÁUDIO
     // ========================================================
 
     localAudioTrack =
-        stream.getAudioTracks()[0];
+        null;
 
-
-    if (localAudioTrack) {
-
-
-        currentAudioPublication =
-            await currentRoom.localParticipant.publishTrack(
-
-                localAudioTrack,
-
-                {
-
-                    name:
-                        'screen_share_audio',
-
-
-                    source:
-                        LivekitClient.Track.Source.ScreenShareAudio
-
-                }
-
-            );
-
-
-        console.log(
-            'Áudio da tela publicado.'
-        );
-
-
-    } else {
-
-        console.log(
-            'Nenhuma faixa de áudio disponível.'
-        );
-
-    }
+    currentAudioPublication =
+        null;
 
 
     // ========================================================
-    // ATUALIZAR ESTADO
+    // ESTADO
     // ========================================================
 
     estaTransmitindo =
@@ -1019,7 +939,6 @@ async function iniciarTransmissao() {
         boxQualidade.classList.add(
             'esconde'
         );
-
     }
 
 
@@ -1027,7 +946,6 @@ async function iniciarTransmissao() {
 
         selectQualidade.disabled =
             true;
-
     }
 
 
@@ -1042,7 +960,6 @@ async function iniciarTransmissao() {
 
 
     atualizarListaParticipantes();
-
 }
 
 
@@ -1051,15 +968,8 @@ async function iniciarTransmissao() {
 // ============================================================
 
 btnTransmitir.addEventListener(
-
     'click',
-
     async () => {
-
-
-        // ----------------------------------------------------
-        // PROTEÇÃO CONTRA CLIQUE DUPLO
-        // ----------------------------------------------------
 
         if (
             !currentRoom ||
@@ -1067,52 +977,50 @@ btnTransmitir.addEventListener(
         ) {
 
             return;
-
         }
 
 
-        btnTransmitir.disabled =
-            true;
+        if (estaTransmitindo) {
+
+            btnTransmitir.disabled =
+                true;
 
 
-        try {
-
-
-            if (estaTransmitindo) {
+            try {
 
                 await pararTransmissao();
 
-            } else {
+            } catch (err) {
 
-                await iniciarTransmissao();
+                console.error(
+                    'Erro ao parar transmissão:',
+                    err
+                );
 
+            } finally {
+
+                btnTransmitir.disabled =
+                    false;
             }
 
 
-        } catch (err) {
-
-
-            console.error(
-                'Erro ao compartilhar tela:',
-                err
-            );
-
-
-            alert(
-                'Falha ao iniciar/parar transmissão: ' +
-                err.message
-            );
-
-
-        } finally {
-
-            btnTransmitir.disabled =
-                false;
-
+            return;
         }
 
-    }
 
+        // ----------------------------------------------------
+        // ABRIR SELETOR PERSONALIZADO
+        // ----------------------------------------------------
+
+        console.log(
+            'Abrindo seletor de fonte...'
+        );
+
+
+        ipcRenderer.send(
+            'abrir-seletor'
+        );
+    }
 );
 
 
@@ -1122,19 +1030,10 @@ btnTransmitir.addEventListener(
 
 function exibirVideoEAudio(track) {
 
-
-    // --------------------------------------------------------
-    // ANEXAR TRACK AO PLAYER
-    // --------------------------------------------------------
-
     track.attach(
         playerVideo
     );
 
-
-    // --------------------------------------------------------
-    // INTERFACE
-    // --------------------------------------------------------
 
     statusTransmissao.classList.add(
         'esconde'
@@ -1149,88 +1048,15 @@ function exibirVideoEAudio(track) {
         true;
 
 
-    // --------------------------------------------------------
-    // REPRODUÇÃO
-    // --------------------------------------------------------
-
     playerVideo.play().catch(
-        (e) => {
+        e => {
 
             console.log(
                 'Autoplay:',
                 e
             );
-
         }
     );
-
-
-    // --------------------------------------------------------
-    // DIAGNÓSTICO DO PLAYER
-    // --------------------------------------------------------
-
-    setTimeout(() => {
-
-
-        console.log('');
-
-        console.log(
-            '=========================================='
-        );
-
-        console.log(
-            '          PLAYER REMOTO'
-        );
-
-        console.log(
-            '=========================================='
-        );
-
-
-        console.log(
-            'videoWidth:',
-            playerVideo.videoWidth
-        );
-
-
-        console.log(
-            'videoHeight:',
-            playerVideo.videoHeight
-        );
-
-
-        console.log(
-            'readyState:',
-            playerVideo.readyState
-        );
-
-
-        console.log(
-            'networkState:',
-            playerVideo.networkState
-        );
-
-
-        if (
-            typeof playerVideo.getVideoPlaybackQuality ===
-            'function'
-        ) {
-
-            console.log(
-                'Playback Quality:',
-                playerVideo.getVideoPlaybackQuality()
-            );
-
-        }
-
-
-        console.log(
-            '=========================================='
-        );
-
-
-    }, 2000);
-
 }
 
 
@@ -1247,21 +1073,18 @@ function limparPlayer() {
     statusTransmissao.classList.remove(
         'esconde'
     );
-
 }
 
 
 // ============================================================
-// ATUALIZAR BOTÃO TRANSMITIR
+// ATUALIZAR BOTÃO
 // ============================================================
 
 function atualizarBotaoTransmitir(
     transmitindo
 ) {
 
-
     if (transmitindo) {
-
 
         btnTransmitir.innerText =
             '⏹ Parar Transmissão';
@@ -1272,9 +1095,7 @@ function atualizarBotaoTransmitir(
             'btn-danger'
         );
 
-
     } else {
-
 
         btnTransmitir.innerText =
             '🎥 Transmitir Tela';
@@ -1284,9 +1105,7 @@ function atualizarBotaoTransmitir(
             'btn-danger',
             'btn-primary'
         );
-
     }
-
 }
 
 
@@ -1295,11 +1114,8 @@ function atualizarBotaoTransmitir(
 // ============================================================
 
 btnCopiarId.addEventListener(
-
     'click',
-
     () => {
-
 
         navigator.clipboard.writeText(
             displayIdSala.innerText
@@ -1309,7 +1125,5 @@ btnCopiarId.addEventListener(
         alert(
             'Nome da sala copiado!'
         );
-
     }
-
 );

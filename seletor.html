@@ -1,0 +1,283 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+
+<head>
+    <meta charset="UTF-8">
+
+    <title>Selecionar transmissão</title>
+
+    <style>
+        * {
+            box-sizing: border-box;
+        }
+
+        body {
+            margin: 0;
+            padding: 24px;
+
+            background: #18191c;
+            color: #ffffff;
+
+            font-family: Arial, sans-serif;
+
+            overflow-y: auto;
+        }
+
+        h1 {
+            margin: 0 0 8px 0;
+
+            font-size: 22px;
+        }
+
+        .descricao {
+            margin-bottom: 24px;
+
+            color: #b5bac1;
+
+            font-size: 14px;
+        }
+
+        /* =====================================================
+           SEÇÕES
+           ===================================================== */
+
+        .secao {
+            margin-bottom: 28px;
+        }
+
+        .titulo {
+            margin-bottom: 12px;
+
+            font-size: 16px;
+            font-weight: bold;
+        }
+
+        /* =====================================================
+           GRID
+           ===================================================== */
+
+        .fontes {
+            display: grid;
+
+            grid-template-columns:
+                repeat(auto-fill, minmax(220px, 1fr));
+
+            gap: 14px;
+        }
+
+        /* =====================================================
+           FONTE
+           ===================================================== */
+
+        .fonte {
+            background: #2b2d31;
+
+            border: 2px solid transparent;
+
+            border-radius: 8px;
+
+            padding: 8px;
+
+            cursor: pointer;
+
+            transition:
+                background 0.15s,
+                border-color 0.15s,
+                transform 0.1s;
+        }
+
+        .fonte:hover {
+            background: #313338;
+
+            transform: translateY(-1px);
+        }
+
+        .fonte.selecionada {
+            border-color: #5865f2;
+
+            background: #30335c;
+        }
+
+        /* =====================================================
+           PREVIEW
+           ===================================================== */
+
+        .preview {
+            width: 100%;
+            height: 120px;
+
+            object-fit: contain;
+
+            background: #111214;
+
+            border-radius: 5px;
+
+            display: block;
+        }
+
+        /* =====================================================
+           NOME
+           ===================================================== */
+
+        .nome {
+            margin-top: 8px;
+
+            font-size: 14px;
+
+            white-space: nowrap;
+
+            overflow: hidden;
+
+            text-overflow: ellipsis;
+        }
+
+        /* =====================================================
+           VAZIO
+           ===================================================== */
+
+        .vazio {
+            padding: 20px;
+
+            background: #2b2d31;
+
+            border-radius: 8px;
+
+            color: #b5bac1;
+
+            font-size: 14px;
+        }
+
+        /* =====================================================
+           RODAPÉ
+           ===================================================== */
+
+        .rodape {
+            position: sticky;
+
+            bottom: 0;
+
+            margin-top: 20px;
+
+            padding-top: 15px;
+
+            background: #18191c;
+
+            display: flex;
+
+            justify-content: flex-end;
+
+            gap: 10px;
+        }
+
+        /* =====================================================
+           BOTÕES
+           ===================================================== */
+
+        button {
+            border: none;
+
+            border-radius: 5px;
+
+            padding: 10px 20px;
+
+            font-size: 14px;
+
+            cursor: pointer;
+        }
+
+        #cancelar {
+            background: #4f545c;
+
+            color: white;
+        }
+
+        #cancelar:hover {
+            background: #5c626b;
+        }
+
+        #confirmar {
+            background: #5865f2;
+
+            color: white;
+        }
+
+        #confirmar:hover:not(:disabled) {
+            background: #4752c4;
+        }
+
+        #confirmar:disabled {
+            opacity: 0.5;
+
+            cursor: not-allowed;
+        }
+    </style>
+</head>
+
+<body>
+
+    <h1>
+        O que você quer transmitir?
+    </h1>
+
+    <div class="descricao">
+        Escolha uma tela inteira ou uma janela específica.
+    </div>
+
+    <!-- =====================================================
+         TELAS
+         ===================================================== -->
+
+    <div class="secao">
+
+        <div class="titulo">
+            🖥️ Telas
+        </div>
+
+        <div
+            id="telas"
+            class="fontes"
+        ></div>
+
+    </div>
+
+    <!-- =====================================================
+         JANELAS
+         ===================================================== -->
+
+    <div class="secao">
+
+        <div class="titulo">
+            🪟 Janelas
+        </div>
+
+        <div
+            id="janelas"
+            class="fontes"
+        ></div>
+
+    </div>
+
+    <!-- =====================================================
+         RODAPÉ
+         ===================================================== -->
+
+    <div class="rodape">
+
+        <button id="cancelar">
+            Cancelar
+        </button>
+
+        <button
+            id="confirmar"
+            disabled
+        >
+            Transmitir
+        </button>
+
+    </div>
+
+    <script src="seletor.js"></script>
+
+</body>
+
+</html>

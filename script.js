@@ -55,22 +55,14 @@ const VERCEL_URL =
 
 
 // ============================================================
-// AUTENTICAÇÃO
+// SALA PERMITIDA
+// ============================================================
+//
+// Sem tela de código de acesso: só entra na sala quem
+// souber o nome dela.
 // ============================================================
 
-const telaAutenticacao =
-    document.getElementById('tela-autenticacao');
-
-const inputCodigo =
-    document.getElementById('input-codigo');
-
-const btnAutenticar =
-    document.getElementById('btn-autenticar');
-
-const statusAutenticacao =
-    document.getElementById('status-autenticacao');
-
-let usuarioAutenticado = false;
+const SALA_PERMITIDA = 'summit';
 
 
 // ============================================================
@@ -163,312 +155,15 @@ carregarVersaoApp();
 
 
 // ============================================================
-// AUTENTICAÇÃO
+// URL DA API
 // ============================================================
 
-async function autenticarUsuario() {
+function obterBaseApi() {
 
-    const codigo =
-        inputCodigo.value.trim();
-
-
-    if (!codigo) {
-
-        mostrarStatusAutenticacao(
-            'Digite seu código de acesso.',
-            true
-        );
-
-        return;
-    }
-
-
-    btnAutenticar.disabled =
-        true;
-
-
-    btnAutenticar.innerText =
-        'Verificando...';
-
-
-    mostrarStatusAutenticacao(
-        'Verificando código...',
-        false
-    );
-
-
-    try {
-
-        const response =
-            await fetch(
-                `${VERCEL_URL}/api/auth`,
-                {
-                    method: 'POST',
-
-                    headers: {
-                        'Content-Type':
-                            'application/json'
-                    },
-
-                    body: JSON.stringify({
-                        code: codigo
-                    })
-                }
-            );
-
-
-        const data =
-            await response.json();
-
-
-        if (
-            !response.ok ||
-            !data.authorized ||
-            !data.sessionToken
-        ) {
-
-            throw new Error(
-                data.error ||
-                'Código de acesso inválido.'
-            );
-        }
-
-
-        // ====================================================
-        // AUTORIZADO
-        // ====================================================
-
-        usuarioAutenticado =
-            true;
-
-
-        // ----------------------------------------------------
-        // SALVAR AUTENTICAÇÃO
-        // ----------------------------------------------------
-
-        sessionStorage.setItem(
-            'app_autenticado',
-            'true'
-        );
-
-
-        // ----------------------------------------------------
-        // SALVAR TOKEN DA SESSÃO
-        // ----------------------------------------------------
-
-        sessionStorage.setItem(
-            'app_session_token',
-            data.sessionToken
-        );
-
-
-        console.log(
-            'Usuário autenticado com sucesso.'
-        );
-
-
-        console.log(
-            'Session token recebido.'
-        );
-
-
-        // ----------------------------------------------------
-        // MOSTRAR LOBBY
-        // ----------------------------------------------------
-
-        telaAutenticacao.classList.add(
-            'esconde'
-        );
-
-
-        telaLobby.classList.remove(
-            'esconde'
-        );
-
-
-        limparStatusAutenticacao();
-
-
-    } catch (erro) {
-
-        console.error(
-            'Erro na autenticação:',
-            erro
-        );
-
-
-        mostrarStatusAutenticacao(
-            erro.message ||
-            'Não foi possível validar o código.',
-            true
-        );
-
-
-        inputCodigo.select();
-
-
-    } finally {
-
-        btnAutenticar.disabled =
-            false;
-
-
-        btnAutenticar.innerText =
-            '🔓 Acessar';
-    }
+    return location.protocol.startsWith('http')
+        ? ''
+        : VERCEL_URL;
 }
-
-
-// ============================================================
-// STATUS DA AUTENTICAÇÃO
-// ============================================================
-
-function mostrarStatusAutenticacao(
-    mensagem,
-    erro = false
-) {
-
-    statusAutenticacao.innerText =
-        mensagem;
-
-
-    statusAutenticacao.classList.remove(
-        'esconde'
-    );
-
-
-    if (erro) {
-
-        statusAutenticacao.classList.add(
-            'erro-autenticacao'
-        );
-
-    } else {
-
-        statusAutenticacao.classList.remove(
-            'erro-autenticacao'
-        );
-    }
-}
-
-
-function limparStatusAutenticacao() {
-
-    statusAutenticacao.innerText =
-        '';
-
-
-    statusAutenticacao.classList.add(
-        'esconde'
-    );
-}
-
-
-// ============================================================
-// VERIFICAR AUTENTICAÇÃO SALVA
-// ============================================================
-
-function verificarAutenticacaoSalva() {
-
-    const autenticado =
-        sessionStorage.getItem(
-            'app_autenticado'
-        );
-
-
-    const sessionToken =
-        sessionStorage.getItem(
-            'app_session_token'
-        );
-
-
-    // --------------------------------------------------------
-    // SESSÃO VÁLIDA
-    // --------------------------------------------------------
-
-    if (
-        autenticado === 'true' &&
-        sessionToken
-    ) {
-
-        usuarioAutenticado =
-            true;
-
-
-        telaAutenticacao.classList.add(
-            'esconde'
-        );
-
-
-        telaLobby.classList.remove(
-            'esconde'
-        );
-
-
-        console.log(
-            'Sessão já autenticada.'
-        );
-
-
-        return true;
-    }
-
-
-    // --------------------------------------------------------
-    // SESSÃO INVÁLIDA / AUSENTE
-    // --------------------------------------------------------
-
-    sessionStorage.removeItem(
-        'app_autenticado'
-    );
-
-
-    sessionStorage.removeItem(
-        'app_session_token'
-    );
-
-
-    usuarioAutenticado =
-        false;
-
-
-    telaAutenticacao.classList.remove(
-        'esconde'
-    );
-
-
-    telaLobby.classList.add(
-        'esconde'
-    );
-
-
-    return false;
-}
-
-
-// ============================================================
-// EVENTOS DA AUTENTICAÇÃO
-// ============================================================
-
-verificarAutenticacaoSalva();
-
-
-btnAutenticar.addEventListener(
-    'click',
-    autenticarUsuario
-);
-
-
-inputCodigo.addEventListener(
-    'keydown',
-    event => {
-
-        if (event.key === 'Enter') {
-
-            autenticarUsuario();
-        }
-    }
-);
 
 
 // ============================================================
@@ -660,6 +355,44 @@ if (ipcRenderer) {
 
 
 // ============================================================
+// TOKEN DO LIVEKIT
+// ============================================================
+
+async function solicitarTokenLiveKit(
+    nomeSala,
+    nomeUsuario
+) {
+
+    const response =
+        await fetch(
+            `${obterBaseApi()}/api/token?room=${nomeSala}&username=${encodeURIComponent(nomeUsuario)}`,
+            {
+                method: 'GET'
+            }
+        );
+
+
+    let data = {};
+
+    try {
+
+        data =
+            await response.json();
+
+    } catch (erro) {
+
+        data = {};
+    }
+
+
+    return {
+        response,
+        data
+    };
+}
+
+
+// ============================================================
 // ENTRAR NA SALA
 // ============================================================
 
@@ -667,45 +400,6 @@ btnEntrarSala.addEventListener(
     'click',
 
     async () => {
-
-        // ----------------------------------------------------
-        // SEGURANÇA
-        // ----------------------------------------------------
-
-        if (!usuarioAutenticado) {
-
-            return alert(
-                'Você precisa informar um código de acesso válido.'
-            );
-        }
-
-
-        // ----------------------------------------------------
-        // TOKEN DA SESSÃO
-        // ----------------------------------------------------
-
-        const sessionToken =
-            sessionStorage.getItem(
-                'app_session_token'
-            );
-
-
-        if (!sessionToken) {
-
-            usuarioAutenticado =
-                false;
-
-
-            sessionStorage.removeItem(
-                'app_autenticado'
-            );
-
-
-            return alert(
-                'Sua sessão de autenticação não foi encontrada. Faça o login novamente.'
-            );
-        }
-
 
         // ----------------------------------------------------
         // DADOS DA SALA
@@ -738,6 +432,18 @@ btnEntrarSala.addEventListener(
         }
 
 
+        // ----------------------------------------------------
+        // SALA PERMITIDA
+        // ----------------------------------------------------
+
+        if (nomeSala !== SALA_PERMITIDA) {
+
+            return alert(
+                'Sala não encontrada. Confira o nome da sala.'
+            );
+        }
+
+
         localStorage.setItem(
             'app_meu_nome',
             meuNome
@@ -754,69 +460,17 @@ btnEntrarSala.addEventListener(
 
         try {
 
-            const baseUrl =
-                location.protocol.startsWith('http')
-                    ? ''
-                    : VERCEL_URL;
-
-
             // =================================================
             // SOLICITAR TOKEN DO LIVEKIT
             // =================================================
 
-            const response =
-                await fetch(
-                    `${baseUrl}/api/token?room=${nomeSala}&username=${encodeURIComponent(meuNome)}`,
-                    {
-                        method: 'GET',
-
-                        headers: {
-
-                            'Authorization':
-                                `Bearer ${sessionToken}`
-                        }
-                    }
-                );
-
-
-            const data =
-                await response.json();
-
-
-            // =================================================
-            // SESSÃO EXPIRADA / INVÁLIDA
-            // =================================================
-
-            if (response.status === 401) {
-
-                sessionStorage.removeItem(
-                    'app_autenticado'
-                );
-
-
-                sessionStorage.removeItem(
-                    'app_session_token'
-                );
-
-
-                usuarioAutenticado =
-                    false;
-
-
-                telaAutenticacao.classList.remove(
-                    'esconde'
-                );
-
-
-                telaLobby.classList.add(
-                    'esconde'
-                );
-
-
-                throw new Error(
-                    'Sua sessão expirou. Faça a autenticação novamente.'
-                );
-            }
+            const {
+                response,
+                data
+            } = await solicitarTokenLiveKit(
+                nomeSala,
+                meuNome
+            );
 
 
             if (

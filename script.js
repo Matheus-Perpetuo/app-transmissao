@@ -1,8 +1,3 @@
-
-// ============================================================
-// REFERÊNCIAS DO HTML
-// ============================================================
-
 const telaLobby =
     document.getElementById('tela-lobby');
 
@@ -45,29 +40,11 @@ const selectQualidade =
 const boxQualidade =
     document.getElementById('box-qualidade');
 
-
-// ============================================================
-// URL DO BACKEND
-// ============================================================
-
 const VERCEL_URL =
     'https://app-transmissao.vercel.app';
 
 
-// ============================================================
-// SALA PERMITIDA
-// ============================================================
-//
-// Sem tela de código de acesso: só entra na sala quem
-// souber o nome dela.
-// ============================================================
-
 const SALA_PERMITIDA = 'summit';
-
-
-// ============================================================
-// ELECTRON
-// ============================================================
 
 let ipcRenderer = null;
 
@@ -100,10 +77,6 @@ if (typeof require === 'function') {
 }
 
 
-// ============================================================
-// VERSÃO DO APP
-// ============================================================
-
 async function carregarVersaoApp() {
 
     const elementoVersao =
@@ -113,10 +86,6 @@ async function carregarVersaoApp() {
         return;
     }
 
-
-    // --------------------------------------------------------
-    // ELECTRON
-    // --------------------------------------------------------
 
     if (ipcRenderer) {
 
@@ -141,11 +110,6 @@ async function carregarVersaoApp() {
         }
     }
 
-
-    // --------------------------------------------------------
-    // NAVEGADOR / VERCEL
-    // --------------------------------------------------------
-
     elementoVersao.innerText =
         'Web';
 }
@@ -153,10 +117,6 @@ async function carregarVersaoApp() {
 
 carregarVersaoApp();
 
-
-// ============================================================
-// URL DA API
-// ============================================================
 
 function obterBaseApi() {
 
@@ -166,20 +126,11 @@ function obterBaseApi() {
 }
 
 
-// ============================================================
-// ESTADO DA APLICAÇÃO
-// ============================================================
-
 let currentRoom = null;
 
 let meuNome = '';
 
 let estaTransmitindo = false;
-
-
-// ============================================================
-// CONTROLE DA CAPTURA
-// ============================================================
 
 let localVideoTrack = null;
 
@@ -189,17 +140,7 @@ let currentVideoPublication = null;
 
 let currentAudioPublication = null;
 
-
-// ============================================================
-// FONTE SELECIONADA
-// ============================================================
-
 let fonteSelecionada = null;
-
-
-// ============================================================
-// PERFIS DE QUALIDADE
-// ============================================================
 
 const perfisQualidade = {
 
@@ -251,11 +192,6 @@ const perfisQualidade = {
     }
 };
 
-
-// ============================================================
-// DOM READY
-// ============================================================
-
 window.addEventListener(
     'DOMContentLoaded',
     () => {
@@ -273,11 +209,6 @@ window.addEventListener(
         }
     }
 );
-
-
-// ============================================================
-// FONTE SELECIONADA PELO SELETOR DO ELECTRON
-// ============================================================
 
 if (ipcRenderer) {
 
@@ -353,11 +284,6 @@ if (ipcRenderer) {
     );
 }
 
-
-// ============================================================
-// TOKEN DO LIVEKIT
-// ============================================================
-
 async function solicitarTokenLiveKit(
     nomeSala,
     nomeUsuario
@@ -391,19 +317,10 @@ async function solicitarTokenLiveKit(
     };
 }
 
-
-// ============================================================
-// ENTRAR NA SALA
-// ============================================================
-
 btnEntrarSala.addEventListener(
     'click',
 
     async () => {
-
-        // ----------------------------------------------------
-        // DADOS DA SALA
-        // ----------------------------------------------------
 
         meuNome =
             inputNome.value.trim();
@@ -432,10 +349,6 @@ btnEntrarSala.addEventListener(
         }
 
 
-        // ----------------------------------------------------
-        // SALA PERMITIDA
-        // ----------------------------------------------------
-
         if (nomeSala !== SALA_PERMITIDA) {
 
             return alert(
@@ -460,9 +373,6 @@ btnEntrarSala.addEventListener(
 
         try {
 
-            // =================================================
-            // SOLICITAR TOKEN DO LIVEKIT
-            // =================================================
 
             const {
                 response,
@@ -483,11 +393,6 @@ btnEntrarSala.addEventListener(
                     'Erro ao gerar o token de acesso.'
                 );
             }
-
-
-            // =================================================
-            // LIVEKIT
-            // =================================================
 
             currentRoom =
                 new LivekitClient.Room({
@@ -564,11 +469,6 @@ btnEntrarSala.addEventListener(
         }
     }
 );
-
-
-// ============================================================
-// EVENTOS DA SALA
-// ============================================================
 
 function configurarEventosDaSala(room) {
 
@@ -679,11 +579,6 @@ function configurarEventosDaSala(room) {
     );
 }
 
-
-// ============================================================
-// LISTA DE PARTICIPANTES
-// ============================================================
-
 function atualizarListaParticipantes() {
 
     if (!currentRoom) {
@@ -760,10 +655,6 @@ function atualizarListaParticipantes() {
 }
 
 
-// ============================================================
-// ADICIONAR USUÁRIO
-// ============================================================
-
 function adicionarUsuarioNaLista(
 
     nomeExibicao,
@@ -813,11 +704,6 @@ function adicionarUsuarioNaLista(
         li
     );
 }
-
-
-// ============================================================
-// PARAR TRANSMISSÃO
-// ============================================================
 
 async function pararTransmissao() {
 
@@ -923,11 +809,6 @@ async function pararTransmissao() {
     atualizarListaParticipantes();
 }
 
-
-// ============================================================
-// INICIAR TRANSMISSÃO
-// ============================================================
-
 async function iniciarTransmissao() {
 
     if (!currentRoom) {
@@ -978,11 +859,6 @@ async function iniciarTransmissao() {
         );
     }
 
-
-    // ========================================================
-    // CAPTURA
-    // ========================================================
-
     const stream =
         await navigator.mediaDevices.getDisplayMedia({
 
@@ -1015,10 +891,6 @@ async function iniciarTransmissao() {
         });
 
 
-    // ========================================================
-    // TRACK DE VÍDEO
-    // ========================================================
-
     localVideoTrack =
         stream.getVideoTracks()[0];
 
@@ -1031,18 +903,9 @@ async function iniciarTransmissao() {
     }
 
 
-    // ========================================================
-    // TRACK DE ÁUDIO
-    // ========================================================
-
     localAudioTrack =
         stream.getAudioTracks()[0] ||
         null;
-
-
-    // ========================================================
-    // DIAGNÓSTICO
-    // ========================================================
 
     const settings =
         localVideoTrack.getSettings();
@@ -1100,18 +963,8 @@ async function iniciarTransmissao() {
         '=========================================='
     );
 
-
-    // ========================================================
-    // OTIMIZAÇÃO PARA JOGOS
-    // ========================================================
-
     localVideoTrack.contentHint =
         'motion';
-
-
-    // ========================================================
-    // PUBLICAR VÍDEO
-    // ========================================================
 
     currentVideoPublication =
         await currentRoom.localParticipant.publishTrack(
@@ -1149,10 +1002,6 @@ async function iniciarTransmissao() {
         );
 
 
-    // ========================================================
-    // PUBLICAR ÁUDIO
-    // ========================================================
-
     if (localAudioTrack) {
 
         currentAudioPublication =
@@ -1182,11 +1031,6 @@ async function iniciarTransmissao() {
             'Nenhuma faixa de áudio foi capturada.'
         );
     }
-
-
-    // ========================================================
-    // ESTADO
-    // ========================================================
 
     estaTransmitindo =
         true;
@@ -1220,11 +1064,6 @@ async function iniciarTransmissao() {
     atualizarListaParticipantes();
 }
 
-
-// ============================================================
-// TRANSMISSÃO NO NAVEGADOR
-// ============================================================
-
 async function iniciarTransmissaoNavegador() {
 
     console.log(
@@ -1255,11 +1094,6 @@ async function iniciarTransmissaoNavegador() {
     }
 }
 
-
-// ============================================================
-// BOTÃO TRANSMITIR
-// ============================================================
-
 btnTransmitir.addEventListener(
 
     'click',
@@ -1276,11 +1110,6 @@ btnTransmitir.addEventListener(
 
             return;
         }
-
-
-        // ----------------------------------------------------
-        // PARAR
-        // ----------------------------------------------------
 
         if (estaTransmitindo) {
 
@@ -1309,11 +1138,6 @@ btnTransmitir.addEventListener(
             return;
         }
 
-
-        // ----------------------------------------------------
-        // ELECTRON
-        // ----------------------------------------------------
-
         if (ipcRenderer) {
 
             console.log(
@@ -1329,11 +1153,6 @@ btnTransmitir.addEventListener(
             return;
         }
 
-
-        // ----------------------------------------------------
-        // NAVEGADOR
-        // ----------------------------------------------------
-
         console.log(
             'Abrindo seletor nativo do navegador...'
         );
@@ -1342,11 +1161,6 @@ btnTransmitir.addEventListener(
         await iniciarTransmissaoNavegador();
     }
 );
-
-
-// ============================================================
-// EXIBIR VÍDEO REMOTO
-// ============================================================
 
 function exibirVideoEAudio(track) {
 
@@ -1380,11 +1194,6 @@ function exibirVideoEAudio(track) {
     );
 }
 
-
-// ============================================================
-// LIMPAR PLAYER
-// ============================================================
-
 function limparPlayer() {
 
     playerVideo.srcObject =
@@ -1395,11 +1204,6 @@ function limparPlayer() {
         'esconde'
     );
 }
-
-
-// ============================================================
-// ATUALIZAR BOTÃO
-// ============================================================
 
 function atualizarBotaoTransmitir(
     transmitindo
@@ -1428,11 +1232,6 @@ function atualizarBotaoTransmitir(
         );
     }
 }
-
-
-// ============================================================
-// COPIAR ID DA SALA
-// ============================================================
 
 btnCopiarId.addEventListener(
 

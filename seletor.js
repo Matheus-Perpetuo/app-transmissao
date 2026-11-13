@@ -2,17 +2,7 @@ const {
     ipcRenderer
 } = require('electron');
 
-
-// ============================================================
-// ESTADO
-// ============================================================
-
 let fonteSelecionada = null;
-
-
-// ============================================================
-// ELEMENTOS
-// ============================================================
 
 const containerTelas =
     document.getElementById('telas');
@@ -25,11 +15,6 @@ const btnConfirmar =
 
 const btnCancelar =
     document.getElementById('cancelar');
-
-
-// ============================================================
-// CARREGAR FONTES
-// ============================================================
 
 async function carregarFontes() {
 
@@ -70,22 +55,11 @@ async function carregarFontes() {
             return;
         }
 
-
-        // ====================================================
-        // SEPARAR TELAS E JANELAS
-        // ====================================================
-
         fontes.forEach(
             (fonte) => {
 
                 const elemento =
                     criarFonte(fonte);
-
-
-                /*
-                 * O Electron retorna IDs de tela
-                 * começando normalmente por "screen:".
-                 */
 
                 if (
                     fonte.id.startsWith(
@@ -108,11 +82,6 @@ async function carregarFontes() {
             }
         );
 
-
-        // ====================================================
-        // CASO NÃO EXISTAM TELAS
-        // ====================================================
-
         if (
             containerTelas.children.length === 0
         ) {
@@ -123,11 +92,6 @@ async function carregarFontes() {
             );
 
         }
-
-
-        // ====================================================
-        // CASO NÃO EXISTAM JANELAS
-        // ====================================================
 
         if (
             containerJanelas.children.length === 0
@@ -164,11 +128,6 @@ async function carregarFontes() {
 
 }
 
-
-// ============================================================
-// CRIAR ITEM DE FONTE
-// ============================================================
-
 function criarFonte(fonte) {
 
     const elemento =
@@ -177,11 +136,6 @@ function criarFonte(fonte) {
 
     elemento.className =
         'fonte';
-
-
-    // ========================================================
-    // PREVIEW
-    // ========================================================
 
     const imagem =
         document.createElement('img');
@@ -198,11 +152,6 @@ function criarFonte(fonte) {
     imagem.alt =
         fonte.name;
 
-
-    // ========================================================
-    // NOME
-    // ========================================================
-
     const nome =
         document.createElement('div');
 
@@ -215,10 +164,6 @@ function criarFonte(fonte) {
         fonte.name;
 
 
-    // ========================================================
-    // MONTAR ELEMENTO
-    // ========================================================
-
     elemento.appendChild(
         imagem
     );
@@ -227,11 +172,6 @@ function criarFonte(fonte) {
     elemento.appendChild(
         nome
     );
-
-
-    // ========================================================
-    // CLIQUE
-    // ========================================================
 
     elemento.addEventListener(
         'click',
@@ -249,19 +189,10 @@ function criarFonte(fonte) {
     return elemento;
 }
 
-
-// ============================================================
-// SELECIONAR FONTE
-// ============================================================
-
 function selecionarFonte(
     fonte,
     elemento
 ) {
-
-    // ========================================================
-    // REMOVER SELEÇÃO ANTERIOR
-    // ========================================================
 
     document
         .querySelectorAll('.fonte')
@@ -276,26 +207,12 @@ function selecionarFonte(
         );
 
 
-    // ========================================================
-    // MARCAR NOVA SELEÇÃO
-    // ========================================================
-
     elemento.classList.add(
         'selecionada'
     );
 
-
-    // ========================================================
-    // GUARDAR FONTE
-    // ========================================================
-
     fonteSelecionada =
         fonte;
-
-
-    // ========================================================
-    // HABILITAR BOTÃO
-    // ========================================================
 
     btnConfirmar.disabled =
         false;
@@ -307,11 +224,6 @@ function selecionarFonte(
     );
 
 }
-
-
-// ============================================================
-// CONFIRMAR
-// ============================================================
 
 btnConfirmar.addEventListener(
     'click',
@@ -329,11 +241,6 @@ btnConfirmar.addEventListener(
             fonteSelecionada
         );
 
-
-        // ====================================================
-        // ENVIAR APENAS OS DADOS NECESSÁRIOS
-        // ====================================================
-
         ipcRenderer.send(
             'fonte-selecionada',
             {
@@ -348,10 +255,6 @@ btnConfirmar.addEventListener(
     }
 );
 
-
-// ============================================================
-// CANCELAR
-// ============================================================
 
 btnCancelar.addEventListener(
     'click',
@@ -369,11 +272,6 @@ btnCancelar.addEventListener(
     }
 );
 
-
-// ============================================================
-// ESC PARA CANCELAR
-// ============================================================
-
 document.addEventListener(
     'keydown',
     (event) => {
@@ -390,10 +288,5 @@ document.addEventListener(
 
     }
 );
-
-
-// ============================================================
-// INICIAR
-// ============================================================
 
 carregarFontes();

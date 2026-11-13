@@ -2,9 +2,6 @@ const crypto = require('crypto');
 
 module.exports = async function handler(req, res) {
 
-    // ============================================================
-    // CORS
-    // ============================================================
 
     res.setHeader(
         'Access-Control-Allow-Origin',
@@ -36,10 +33,6 @@ module.exports = async function handler(req, res) {
 
     try {
 
-        // ========================================================
-        // RECEBER CÓDIGO
-        // ========================================================
-
         const { code } =
             req.body || {};
 
@@ -51,10 +44,6 @@ module.exports = async function handler(req, res) {
             });
         }
 
-
-        // ========================================================
-        // CÓDIGOS AUTORIZADOS
-        // ========================================================
 
         const accessCodes =
             process.env.APP_ACCESS_CODES || '';
@@ -79,10 +68,6 @@ module.exports = async function handler(req, res) {
             );
 
 
-        // ========================================================
-        // CÓDIGO INVÁLIDO
-        // ========================================================
-
         if (!authorized) {
 
             return res.status(403).json({
@@ -90,10 +75,6 @@ module.exports = async function handler(req, res) {
             });
         }
 
-
-        // ========================================================
-        // SECRET DA AUTENTICAÇÃO
-        // ========================================================
 
         const authSecret =
             process.env.APP_AUTH_SECRET;
@@ -110,10 +91,6 @@ module.exports = async function handler(req, res) {
             });
         }
 
-
-        // ========================================================
-        // CRIAR SESSÃO
-        // ========================================================
 
         const timestamp =
             Date.now().toString();
@@ -140,10 +117,6 @@ module.exports = async function handler(req, res) {
                 )
                 .toString('base64');
 
-
-        // ========================================================
-        // RESPOSTA
-        // ========================================================
 
         return res.status(200).json({
 

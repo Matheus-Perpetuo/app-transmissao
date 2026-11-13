@@ -2,9 +2,6 @@ const { AccessToken } = require('livekit-server-sdk');
 
 module.exports = async function handler(req, res) {
 
-    // ============================================================
-    // CORS
-    // ============================================================
 
     res.setHeader(
         'Access-Control-Allow-Origin',
@@ -27,10 +24,6 @@ module.exports = async function handler(req, res) {
     }
 
 
-    // ============================================================
-    // MÉTODO
-    // ============================================================
-
     if (
         req.method !== 'GET' &&
         req.method !== 'POST'
@@ -43,10 +36,6 @@ module.exports = async function handler(req, res) {
 
 
     try {
-
-        // ========================================================
-        // RECEBER DADOS
-        // ========================================================
 
         const room =
             req.query.room;
@@ -64,10 +53,6 @@ module.exports = async function handler(req, res) {
         }
 
 
-        // ========================================================
-        // SALA PERMITIDA
-        // ========================================================
-
         const SALA_PERMITIDA = 'summit';
 
 
@@ -83,10 +68,6 @@ module.exports = async function handler(req, res) {
             });
         }
 
-
-        // ========================================================
-        // LIVEKIT
-        // ========================================================
 
         const apiKey =
             process.env.LIVEKIT_API_KEY;
@@ -113,10 +94,6 @@ module.exports = async function handler(req, res) {
         }
 
 
-        // ========================================================
-        // NORMALIZAR URL
-        // ========================================================
-
         if (
             wsUrl.startsWith(
                 'https://'
@@ -130,10 +107,6 @@ module.exports = async function handler(req, res) {
                 );
         }
 
-
-        // ========================================================
-        // GERAR TOKEN LIVEKIT
-        // ========================================================
 
         const at =
             new AccessToken(
@@ -168,10 +141,6 @@ module.exports = async function handler(req, res) {
         const token =
             await at.toJwt();
 
-
-        // ========================================================
-        // RESPOSTA
-        // ========================================================
 
         return res.status(200).json({
 

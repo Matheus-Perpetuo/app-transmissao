@@ -1,26 +1,9 @@
-// ============================================================
-// SERVIDOR DE DESENVOLVIMENTO (NAVEGADOR)
-// ------------------------------------------------------------
-// Serve os arquivos estáticos do projeto e responde /api/*.
-//
-// Se houver credenciais do LiveKit no .env, a API roda
-// localmente. Caso contrário, as chamadas são encaminhadas
-// para o backend publicado no Vercel.
-//
-// Uso: npm run dev
-// ============================================================
-
 const http = require('http');
 const https = require('https');
 const fs = require('fs');
 const path = require('path');
 
 const RAIZ = __dirname;
-
-
-// ============================================================
-// VARIÁVEIS DE AMBIENTE (.env)
-// ============================================================
 
 function carregarEnv() {
 
@@ -120,10 +103,6 @@ const TIPOS = {
 };
 
 
-// ============================================================
-// PROXY /api
-// ============================================================
-
 function encaminharApi(req, res) {
 
     const opcoes = {
@@ -177,10 +156,6 @@ function encaminharApi(req, res) {
 }
 
 
-// ============================================================
-// API LOCAL (reutiliza os handlers de /api)
-// ============================================================
-
 function tratarApiLocal(req, res) {
 
     const caminho =
@@ -211,10 +186,6 @@ function tratarApiLocal(req, res) {
     }
 
 
-    // --------------------------------------------------------
-    // ADAPTAR RESPOSTA NO PADRÃO DO VERCEL
-    // --------------------------------------------------------
-
     res.status = codigo => {
 
         res.statusCode = codigo;
@@ -239,10 +210,6 @@ function tratarApiLocal(req, res) {
     };
 
 
-    // --------------------------------------------------------
-    // QUERY STRING
-    // --------------------------------------------------------
-
     const url =
         new URL(
             req.url,
@@ -255,10 +222,6 @@ function tratarApiLocal(req, res) {
             url.searchParams.entries()
         );
 
-
-    // --------------------------------------------------------
-    // EXECUTAR HANDLER
-    // --------------------------------------------------------
 
     const executar = () => {
 
@@ -286,10 +249,6 @@ function tratarApiLocal(req, res) {
             });
     };
 
-
-    // --------------------------------------------------------
-    // CORPO DA REQUISIÇÃO
-    // --------------------------------------------------------
 
     if (req.method === 'POST') {
 
@@ -339,10 +298,6 @@ function tratarApiLocal(req, res) {
 }
 
 
-// ============================================================
-// ARQUIVOS ESTÁTICOS
-// ============================================================
-
 function servirArquivo(req, res) {
 
     const url =
@@ -359,8 +314,6 @@ function servirArquivo(req, res) {
             )
         );
 
-
-    // Impedir acesso fora da raiz do projeto
     if (!caminho.startsWith(RAIZ)) {
 
         res.writeHead(403);
@@ -402,10 +355,6 @@ function servirArquivo(req, res) {
     );
 }
 
-
-// ============================================================
-// SERVIDOR
-// ============================================================
 
 const servidor =
     http.createServer((req, res) => {
